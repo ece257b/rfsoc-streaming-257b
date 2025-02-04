@@ -24,8 +24,8 @@ const int HEADER_SIZE        = sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint
 const int DATA_PACKET_SIZE   = HEADER_SIZE + PAYLOAD_SIZE;  // full DATA packet size
 const int CTRL_PACKET_SIZE   = HEADER_SIZE;                 // control (ACK/NACK) packets contain only the header
 
-const int WINDOW_SIZE        = 1024;     // sliding window size
-const int DEFAULT_MAX_PACKETS = 1000;   // default number of packets in dummy mode
+const int WINDOW_SIZE        = 6666;     // sliding window size
+const int DEFAULT_MAX_PACKETS = 1000000000;   // default number of packets in dummy mode
 const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
