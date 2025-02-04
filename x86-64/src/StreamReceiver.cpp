@@ -16,6 +16,9 @@
 #include <sstream>
 #include <iterator>
 
+// For Random Error
+#include <random>
+
 using namespace std::chrono;
 
 // --- Protocol constants (must match sender) ---
@@ -63,6 +66,11 @@ int main(int argc, char* argv[]) {
     // Usage: ./StreamReceiver [port] [--debug] [--statistics]
     bool debug = false;
     bool stats = false;
+    bool random_error = false;
+    // set up random number generator
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 1000);
     int listen_port = 12345;
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
@@ -71,7 +79,11 @@ int main(int argc, char* argv[]) {
             debug = true;
         } else if(arg == "--statistics") {
             stats = true;
-        } else {
+        }
+        else if(arg == "--random-error") {
+            random_error = true; // simulate 0.1% packet loss
+        }
+        else {
             args.push_back(arg);
         }
     }
@@ -172,7 +184,15 @@ int main(int argc, char* argv[]) {
         std::memcpy(temp_buf.data(), buffer, recv_len);
         std::memset(temp_buf.data() + 7, 0, sizeof(uint16_t));
         uint16_t computed_checksum = compute_checksum(temp_buf.data(), recv_len);
-        if(computed_checksum != recv_checksum) {
+        bool random_error_active = false;
+        if(random_error) {
+            int random_number = dis(gen);
+            if(random_number <= 10) {
+                random_error_active = true;
+            }
+
+        }
+        if((computed_checksum != recv_checksum) || random_error_active) {
             if(debug)
                 std::cerr << "Invalid checksum for packet seq: " << seq_num << ", discarding." << std::endl;
             continue;
