@@ -65,7 +65,6 @@ int main(int argc, char* argv[]) {
         if(arg == "--debug") {
             debug = true;
         } else {
-            // Assume any non --debug argument is the port number.
             listen_port = std::atoi(argv[i]);
         }
     }
@@ -109,7 +108,7 @@ int main(int argc, char* argv[]) {
     }
     std::cout << "Received handshake from sender. Sending negotiation packet..." << std::endl;
     // Prepare negotiation packet: two shorts (buffer size and packet size) in network order.
-    const uint16_t negotiated_buffer_size = 1024;         // Example buffer size.
+    const uint16_t negotiated_buffer_size = 1024;           // Example buffer size.
     const uint16_t negotiated_packet_size   = DATA_PACKET_SIZE; // Negotiated packet size.
     char negotiation_packet[4];
     uint16_t net_buffer_size = htons(negotiated_buffer_size);
@@ -125,9 +124,8 @@ int main(int argc, char* argv[]) {
     }
 
     // === End negotiation; now proceed to receive DATA packets ===
-
     uint32_t expected_seq = 0;
-    // Use a map to store out-of-order DATA packets (keyed by sequence number)
+    // Map for storing out-of-order packets.
     std::map<uint32_t, std::vector<char>> out_of_order;
 
     // --- Debug counters (if debug mode is enabled) ---
@@ -137,7 +135,6 @@ int main(int argc, char* argv[]) {
     uint64_t debug_nack_sent = 0;
     auto last_debug_time = steady_clock::now();
 
-    // Main loop: receive DATA packets, send cumulative ACKs and NACKs for gaps.
     while (true) {
         char buffer[DATA_PACKET_SIZE];
         sockaddr_in curr_sender_addr;
@@ -145,21 +142,19 @@ int main(int argc, char* argv[]) {
         ssize_t recv_len = recvfrom(sockfd, buffer, sizeof(buffer), 0,
                                     (sockaddr*)&curr_sender_addr, &curr_sender_addr_len);
         if(recv_len < 0) {
-            // No packet received—sleep briefly.
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         } else if(recv_len < HEADER_SIZE) {
             std::cout << "Received packet too small, ignoring." << std::endl;
             continue;
         } else {
-            // Parse header.
             PacketHeader header;
             std::memcpy(&header, buffer, HEADER_SIZE);
             uint32_t seq_num     = ntohl(header.seq_num);
-            uint16_t window_size = ntohs(header.window_size);
+            uint16_t pkt_window  = ntohs(header.window_size);
             uint8_t ctrl_flag    = header.control_flags;
             uint16_t recv_checksum = ntohs(header.checksum);
 
-            // Verify checksum (zero out checksum field before computing).
+            // Verify checksum.
             std::vector<char> temp_buf(recv_len, 0);
             std::memcpy(temp_buf.data(), buffer, recv_len);
             std::memset(temp_buf.data() + 7, 0, sizeof(uint16_t));
@@ -172,15 +167,14 @@ int main(int argc, char* argv[]) {
             // Process only DATA packets.
             if(ctrl_flag == FLAG_DATA) {
                 if(debug) {
-                    debug_data_bytes += recv_len;  // Count entire packet bytes.
+                    debug_data_bytes += recv_len;
                     debug_data_packets++;
                 }
-                std::cout << "Received DATA packet seq: " << seq_num << std::endl;
+//                std::cout << "Received DATA packet seq: " << seq_num << std::endl;
                 if(seq_num == expected_seq) {
-                    // “Deliver” (process) this packet.
-                    std::cout << "Processing packet seq: " << seq_num << std::endl;
+//                    std::cout << "Processing packet seq: " << seq_num << std::endl;
                     expected_seq++;
-                    // Check if any buffered packets can now be processed.
+                    // Process any buffered in-order packets.
                     while(out_of_order.count(expected_seq)) {
                         std::cout << "Processing buffered packet seq: " << expected_seq << std::endl;
                         out_of_order.erase(expected_seq);
@@ -188,18 +182,17 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 else if(seq_num > expected_seq) {
-                    // Out-of-order packet: store it if not already present.
                     if(out_of_order.find(seq_num) == out_of_order.end()) {
                         std::vector<char> pkt(buffer, buffer + recv_len);
                         out_of_order[seq_num] = pkt;
                         std::cout << "Stored out-of-order packet seq: " << seq_num << std::endl;
                     }
-                    // For every missing packet between expected_seq and the one just received, send a NACK.
+                    // Send NACKs for each missing packet.
                     for(uint32_t missing = expected_seq; missing < seq_num; missing++) {
                         std::vector<char> nack_packet(CTRL_PACKET_SIZE, 0);
                         PacketHeader nack_header;
                         nack_header.seq_num      = htonl(missing);
-                        nack_header.window_size  = htons(window_size);
+                        nack_header.window_size  = htons(pkt_window);
                         nack_header.control_flags = FLAG_NACK;
                         nack_header.checksum     = 0;
                         std::memcpy(nack_packet.data(), &nack_header, HEADER_SIZE);
@@ -217,35 +210,57 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 else {
-                    // Duplicate (already delivered).
                     std::cout << "Duplicate packet seq: " << seq_num << " ignored." << std::endl;
+                    // Send NACK for first missing packet.
+                    std::vector<char> nack_packet(CTRL_PACKET_SIZE, 0);
+                    PacketHeader nack_header;
+                    nack_header.seq_num      = htonl(expected_seq);
+                    nack_header.window_size  = htons(pkt_window);
+                    nack_header.control_flags = FLAG_NACK;
+                    nack_header.checksum     = 0;
+                    std::memcpy(nack_packet.data(), &nack_header, HEADER_SIZE);
+                    uint16_t nack_chksum = compute_checksum(nack_packet.data(), nack_packet.size());
+                    uint16_t net_nack_chksum = htons(nack_chksum);
+                    std::memcpy(nack_packet.data() + 7, &net_nack_chksum, sizeof(uint16_t));
+                    ssize_t sent_bytes = sendto(sockfd, nack_packet.data(), nack_packet.size(), 0,
+                                                (sockaddr*)&curr_sender_addr, curr_sender_addr_len);
+                    if(sent_bytes < 0)
+                        perror("sendto NACK failed");
+                    else {
+                        std::cout << "Sent NACK for duplicate seq: " << expected_seq << std::endl;
+                        if(debug) debug_nack_sent++;
+                    }
                 }
 
-                // Send a cumulative ACK for the highest in-order packet (i.e. expected_seq - 1).
-                uint32_t ack_seq = (expected_seq > 0) ? expected_seq - 1 : 0;
-                std::vector<char> ack_packet(CTRL_PACKET_SIZE, 0);
-                PacketHeader ack_header;
-                ack_header.seq_num      = htonl(ack_seq);
-                ack_header.window_size  = htons(window_size);
-                ack_header.control_flags = FLAG_ACK;
-                ack_header.checksum     = 0;
-                std::memcpy(ack_packet.data(), &ack_header, HEADER_SIZE);
-                uint16_t ack_chksum = compute_checksum(ack_packet.data(), ack_packet.size());
-                uint16_t net_ack_chksum = htons(ack_chksum);
-                std::memcpy(ack_packet.data() + 7, &net_ack_chksum, sizeof(uint16_t));
-                ssize_t sent_bytes = sendto(sockfd, ack_packet.data(), ack_packet.size(), 0,
-                                            (sockaddr*)&curr_sender_addr, curr_sender_addr_len);
-                if(sent_bytes < 0)
-                    perror("sendto ACK failed");
-                else {
-                    std::cout << "Sent ACK for seq: " << ack_seq << std::endl;
-                    if(debug) debug_ack_sent++;
+                // --- Send ACK only at the end of a sliding window ---
+                // We send a cumulative ACK only when the number of in-order packets delivered
+                // (expected_seq) is a multiple of the window size.
+                if (expected_seq > 0 && (expected_seq % pkt_window == 0)) {
+                    uint32_t ack_seq = expected_seq - 1;
+                    std::vector<char> ack_packet(CTRL_PACKET_SIZE, 0);
+                    PacketHeader ack_header;
+                    ack_header.seq_num      = htonl(ack_seq);
+                    ack_header.window_size  = htons(pkt_window);
+                    ack_header.control_flags = FLAG_ACK;
+                    ack_header.checksum     = 0;
+                    std::memcpy(ack_packet.data(), &ack_header, HEADER_SIZE);
+                    uint16_t ack_chksum = compute_checksum(ack_packet.data(), ack_packet.size());
+                    uint16_t net_ack_chksum = htons(ack_chksum);
+                    std::memcpy(ack_packet.data() + 7, &net_ack_chksum, sizeof(uint16_t));
+                    ssize_t sent_bytes = sendto(sockfd, ack_packet.data(), ack_packet.size(), 0,
+                                                (sockaddr*)&curr_sender_addr, curr_sender_addr_len);
+                    if(sent_bytes < 0)
+                        perror("sendto ACK failed");
+                    else {
+//                        std::cout << "Sent ACK for seq: " << ack_seq << std::endl;
+                        if(debug) debug_ack_sent++;
+                    }
                 }
             }
-            // (Any non-DATA packets are ignored.)
+            // Ignore non-DATA packets.
         } // end processing received packet
 
-        // --- Debug reporting: every second print throughput and packet counts ---
+        // --- Debug reporting: every second ---
         if(debug) {
             auto now = steady_clock::now();
             auto elapsed = duration_cast<seconds>(now - last_debug_time);
@@ -253,18 +268,17 @@ int main(int argc, char* argv[]) {
                 double bps = debug_data_bytes * 8.0 / elapsed.count();
                 if(bps >= 1e9) {
                     double gbps = bps / 1e9;
-                    std::cout << "[DEBUG] Throughput: " << gbps << " Gbps, "
+                    std::cout << "[DEBUG] Throughput: " << gbps << " GB/s, "
                               << "DATA packets: " << debug_data_packets << ", "
                               << "ACKs sent: " << debug_ack_sent << ", "
                               << "NACKs sent: " << debug_nack_sent << std::endl;
                 } else {
                     double mbps = bps / 1e6;
-                    std::cout << "[DEBUG] Throughput: " << mbps << " Mbps, "
+                    std::cout << "[DEBUG] Throughput: " << mbps << " MB/s, "
                               << "DATA packets: " << debug_data_packets << ", "
                               << "ACKs sent: " << debug_ack_sent << ", "
                               << "NACKs sent: " << debug_nack_sent << std::endl;
                 }
-                // Reset debug counters.
                 debug_data_bytes = 0;
                 debug_data_packets = 0;
                 debug_ack_sent = 0;
