@@ -295,6 +295,10 @@ int main(int argc, char* argv[]) {
                             std::cout << "Retransmitted packet seq: " << pkt_seq << " upon NACK" << std::endl;
                         it->second.last_sent = steady_clock::now();
                     }
+                } else {
+                    if (debug) {
+                        std::cout << "Something wrong!" << std::endl;
+                    }
                 }
             }
         }
@@ -309,7 +313,7 @@ int main(int argc, char* argv[]) {
                 if(s < 0)
                     perror("Timeout retransmit sendto failed");
                 else if(debug)
-//                    std::cout << "Timeout retransmitted packet seq: " << kv.first << std::endl;
+                   std::cout << "Timeout retransmitted packet seq: " << kv.first << std::endl;
                 kv.second.last_sent = now;
             }
         }
@@ -335,7 +339,7 @@ int main(int argc, char* argv[]) {
     } // end while (data streaming)
 
     // --- FIN handshake for EOF in file mode ---
-    if(file_mode) {
+    if(true) {
         // Build FIN packet.
         PacketHeader fin_header;
         // Use max_packets as the sequence number for FIN.
