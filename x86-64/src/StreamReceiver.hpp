@@ -1,3 +1,5 @@
+#include "DataProcessing.hpp"
+
 // - class StreamReceiver
 //   - setup()
 //   - receiveStream()
@@ -8,3 +10,22 @@
 //   - sendNACK()
 //   - sendACK()
 //   - teardown()
+
+class StreamReceiver
+{
+private:
+    DataProcessor& processor;
+    DataWindow& window;
+
+    int receiveData();
+    int sendACK();
+    int sendNACK();
+
+public:
+    StreamReceiver(/* args */);
+    ~StreamReceiver();
+
+    int setup();
+    int receiveStream();
+    int teardown();
+};
