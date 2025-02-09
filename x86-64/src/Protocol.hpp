@@ -46,6 +46,13 @@ struct PacketHeader {
 };
 #pragma pack(pop)
 
+#pragma pack(push, 1)
+struct Packet {
+    PacketHeader header;
+    char data[PAYLOAD_SIZE];
+};
+#pragma pack(pop)
+
 // --- Simple Internet checksum (RFC1071 style) ---
 uint16_t compute_checksum(const void* data, size_t len) {
     uint32_t sum = 0;
@@ -61,8 +68,10 @@ uint16_t compute_checksum(const void* data, size_t len) {
     return static_cast<uint16_t>(~sum);
 }
 
-// --- Structure to track unacknowledged packets --- : TODO move to DataWindow
-struct PacketInfo {
-    std::vector<char> buffer;
-    std::chrono::steady_clock::time_point last_sent;
-};
+bool verifyChecksum(Packet* packet, ssize_t length) {
+    uint16_t temp = packet->header.checksum;
+    packet->header.checksum = 0;
+    bool match = (temp == compute_checksum((void*) packet, length));
+    packet->header.checksum = temp;
+    return match;
+}

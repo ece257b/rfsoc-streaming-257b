@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Statistics.hpp"
 #include "DataProcessing.hpp"
 #include "NetworkUtils.hpp"
 #include <string>
@@ -28,7 +29,9 @@ class StreamSender
 {
 private:
     DataProvider& provider;
-    DataWindow& window;
+    DataWindow<PacketInfo>& window;
+    SenderStats stats;
+    
     sockaddr_in receiver_addr;
     int sockfd = 0;
     bool debug = false;
@@ -37,11 +40,12 @@ private:
     uint32_t max_packets = DEFAULT_MAX_PACKETS;
 
     int handshake();
-    int sendData(uint32_t seq_num);
+    PacketInfo* preparePacket(uint32_t seq_num);
+    int sendPacket(PacketInfo* info);
     int processACKs();
-    int getTimedOut();
+    void prepareFINPacket(PacketHeader* header, ControlFlag flag);
 public:
-    StreamSender(DataProvider& provider, DataWindow& window, bool debug);
+    StreamSender(DataProvider& provider, DataWindow<PacketInfo>& window, bool debug);
     ~StreamSender();
 
     int setup(int receiver_port, std::string& receiver_ip);
