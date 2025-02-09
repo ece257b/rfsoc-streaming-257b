@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <string>
 
-int createUDPSocket() {
+inline int createUDPSocket() {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if(sockfd < 0) {
         perror("socket creation failed");
@@ -24,7 +24,7 @@ int createUDPSocket() {
     return sockfd;
 }
 
-sockaddr_in setupReceiver(int sockfd, int receiver_port, std::string& receiver_ip) {
+inline sockaddr_in setupReceiver(int sockfd, int receiver_port, std::string& receiver_ip) {
     sockaddr_in receiver_addr;
     std::memset(&receiver_addr, 0, sizeof(receiver_addr));
     receiver_addr.sin_family = AF_INET;

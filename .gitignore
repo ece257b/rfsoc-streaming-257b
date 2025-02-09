@@ -1,2 +1,4 @@
 .vscode
 **.o
+x86-64/src/Streamer
+x86-64/src/Receiver

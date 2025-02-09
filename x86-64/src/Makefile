@@ -2,15 +2,15 @@
 
 # Compiler and flags
 CXX      := g++
-CXXFLAGS := -O2 -std=c++17 -Wall -Wextra 
+CXXFLAGS := -O2 -std=c++11 -Wall -Wextra 
 
 # Automatically find all .cpp and .hpp files
 SRCS := $(wildcard *.cpp)
 HDRS := $(wildcard *.hpp)
 
 # Main files (explicitly listed)
-STREAMER_MAIN := MainStreamer.cpp StreamSender.cpp
-RECEIVER_MAIN := MainReceiver.cpp StreamReceiver.cpp
+STREAMER_MAIN := MainStreamer.cpp
+RECEIVER_MAIN := MainReceiver.cpp
 
 # Filter out main files from SRCS to avoid duplicate compilation
 COMMON_SRCS := $(filter-out $(STREAMER_MAIN) $(RECEIVER_MAIN), $(SRCS))

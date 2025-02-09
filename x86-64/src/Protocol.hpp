@@ -54,7 +54,7 @@ struct Packet {
 #pragma pack(pop)
 
 // --- Simple Internet checksum (RFC1071 style) ---
-uint16_t compute_checksum(const void* data, size_t len) {
+inline uint16_t compute_checksum(const void* data, size_t len) {
     uint32_t sum = 0;
     const uint16_t* ptr = reinterpret_cast<const uint16_t*>(data);
     while(len > 1) {
@@ -68,7 +68,7 @@ uint16_t compute_checksum(const void* data, size_t len) {
     return static_cast<uint16_t>(~sum);
 }
 
-bool verifyChecksum(Packet* packet, ssize_t length) {
+inline bool verifyChecksum(Packet* packet, ssize_t length) {
     uint16_t temp = packet->header.checksum;
     packet->header.checksum = 0;
     bool match = (temp == compute_checksum(packet, length));
