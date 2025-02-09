@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <functional>
+#include "Protocol.hpp"
 
 // --- Structure to track unacknowledged packets --- 
 struct PacketInfo {
@@ -32,7 +33,6 @@ public:
     virtual bool contains(uint16_t seq_num) = 0;
     virtual DataType* get(uint16_t seq_num) = 0;
     virtual bool erase(uint16_t seq_num) = 0;
-    virtual DataType* pop(uint16_t seq_num) = 0;
 
     virtual bool isFull() = 0;
     virtual bool isEmpty() = 0;

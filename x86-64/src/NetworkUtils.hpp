@@ -36,4 +36,3 @@ sockaddr_in setupReceiver(int sockfd, int receiver_port, std::string& receiver_i
     }
     return receiver_addr;
 }
-

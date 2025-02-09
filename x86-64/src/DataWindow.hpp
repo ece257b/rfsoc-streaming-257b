@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <unordered_map>
 #include "Protocol.hpp"
@@ -14,7 +15,7 @@ public:
         }
     };
     
-    PacketInfo* reserve(uint16_t seq_num) {
+    PacketInfo* reserve(uint16_t seq_num) override {
         Packet* packet = new Packet();
         packet->header.seq_num = seq_num;
         PacketInfo info;
@@ -23,11 +24,11 @@ public:
         return &(*it).second;
     };
 
-    bool contains(uint16_t seq_num) {
+    bool contains(uint16_t seq_num) override {
         return packetmap.count(seq_num) != 0;
     };
 
-    PacketInfo* get(uint16_t seq_num) {
+    PacketInfo* get(uint16_t seq_num) override {
         auto it = packetmap.find(seq_num);
         if (it == packetmap.end()) {
             return nullptr;
@@ -35,7 +36,7 @@ public:
         return &(*it).second;
     };
 
-    bool erase(uint16_t seq_num) {
+    bool erase(uint16_t seq_num) override {
         auto it = packetmap.find(seq_num);
         if (it != packetmap.end()) {
             free(it->second.packet);
@@ -45,15 +46,15 @@ public:
         return false;
     };
 
-    bool isFull() {
+    bool isFull() override {
         return packetmap.size() >= WINDOW_SIZE;
     };
 
-    bool isEmpty() {
+    bool isEmpty() override {
         return packetmap.empty();
     };
 
-    bool forEachData(WindowCallback callback) {
+    bool forEachData(WindowCallback callback) override {
         for (auto item : packetmap) {
             if (!callback(item.first, &item.second)) {
                 return false;
@@ -63,27 +64,3 @@ public:
     }
 };
 
-
-class DummyProvider : public DataProvider {
-// Interface to read data sequentially. Can use for dummy, file, or stream
-private:
-    uint32_t count = 0;
-public:
-    int getData(size_t size, char* buffer) {
-        char fill_char = 'A' + (count % 26);
-        std::memset(buffer, fill_char, size);
-        return size;
-    }
-};
-
-class DummyProcessor : public DataProvider {
-//  Interface for sequentially processing data
-private:
-    bool print;
-public:
-    DummyProcessor(bool print) : print(print) {}
-    int processData(size_t size, char* buffer) {
-        if (print) std::cout << buffer << std::endl;
-        return size;
-    };
-};

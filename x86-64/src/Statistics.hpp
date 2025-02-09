@@ -1,3 +1,4 @@
+#pragma once
 #include <chrono>
 #include <stdint.h>
 #include <iostream>
@@ -7,8 +8,8 @@ using namespace std::chrono;
 class SenderStats {
 private:
 public:
-    SenderStats();
-    ~SenderStats();
+    SenderStats() {};
+    ~SenderStats() {};
 
     void reset() {
         sent_data_bytes = 0;

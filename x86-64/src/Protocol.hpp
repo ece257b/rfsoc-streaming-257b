@@ -71,7 +71,7 @@ uint16_t compute_checksum(const void* data, size_t len) {
 bool verifyChecksum(Packet* packet, ssize_t length) {
     uint16_t temp = packet->header.checksum;
     packet->header.checksum = 0;
-    bool match = (temp == compute_checksum((void*) packet, length));
+    bool match = (temp == compute_checksum(packet, length));
     packet->header.checksum = temp;
     return match;
 }

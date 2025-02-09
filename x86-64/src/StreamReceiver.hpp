@@ -1,3 +1,4 @@
+#pragma once
 #include "DataProcessing.hpp"
 
 // - class StreamReceiver

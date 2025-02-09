@@ -8,8 +8,10 @@
 
 using namespace std::chrono;
 
-StreamSender::StreamSender(DataProvider& provider, DataWindow<PacketInfo>& window, bool debug) 
+StreamSender::StreamSender(DataProvider* provider, DataWindow<PacketInfo>* window, bool debug)
         : provider(provider), window(window), debug(debug) {}
+
+StreamSender::~StreamSender() {}
 
 int StreamSender::setup(int receiver_port, std::string& receiver_ip) {
     sockfd = createUDPSocket();
@@ -74,7 +76,7 @@ int StreamSender::stream() {
         processACKs();
 
         auto now = steady_clock::now();
-        window.forEachData([&](uint32_t seq_num, PacketInfo* info){
+        window->forEachData([&](uint32_t seq_num, PacketInfo* info){
             auto elapsed = std::chrono::duration_cast<milliseconds>(now - info->last_sent);
             if (elapsed.count() >= TIMEOUT_MS) {
                 sendPacket(info);
@@ -89,7 +91,7 @@ int StreamSender::stream() {
 }
 
 PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
-    PacketInfo* info = window.reserve(seq_num);
+    PacketInfo* info = window->reserve(seq_num);
     Packet* packet = info->packet;
     PacketHeader* header = &packet->header;
     char* dataBuffer = packet->data;
@@ -99,7 +101,7 @@ PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
     header->control_flags = FLAG_DATA;
     header->checksum = 0;
 
-    size_t size = provider.getData(PAYLOAD_SIZE, dataBuffer);
+    size_t size = provider->getData(PAYLOAD_SIZE, dataBuffer);
     info->packet_size = size;
 
     uint16_t chksum = compute_checksum(packet, DATA_PACKET_SIZE);
@@ -139,7 +141,7 @@ int StreamSender::processACKs() {
         Packet packet;
         sockaddr_in sender_addr;
         socklen_t sender_addr_len = sizeof(sender_addr);
-        ssize_t recv_len = recvfrom(sockfd, (void*)&packet, sizeof(packet), 0,
+        ssize_t recv_len = recvfrom(sockfd, &packet, sizeof(packet), 0,
                                     (sockaddr*)&sender_addr, &sender_addr_len);
         if(recv_len >= HEADER_SIZE) {
             uint32_t pkt_seq = ntohl(packet.header.seq_num);
@@ -154,13 +156,13 @@ int StreamSender::processACKs() {
                 if(debug) std::cout << "Received ACK for seq: " << pkt_seq << std::endl;
                 if(pkt_seq >= base) {
                     for(uint32_t seq = base; seq <= pkt_seq; seq++)
-                        window.erase(seq);
+                        window->erase(seq);
                     base = pkt_seq + 1;
                 }
             } else if(ctrl_flag == FLAG_NACK) {
                 if(debug) std::cout << "Received NACK for seq: " << pkt_seq << std::endl;
 
-                PacketInfo* info = window.get(pkt_seq);
+                PacketInfo* info = window->get(pkt_seq);
                 if (info) {
                     sendPacket(info);
                 } else {
@@ -215,10 +217,9 @@ int StreamSender::teardown() {
         std::this_thread::sleep_for(milliseconds(100));
         fin_ack_retransmissions++;
     }
-    // Send final ACK.
-    PacketHeader header;
-    prepareFINPacket(&header, FLAG_ACK);
-    ssize_t s2 = sendto(sockfd, &header, CTRL_PACKET_SIZE, 0,
+    PacketHeader finHeader;
+    prepareFINPacket(&finHeader, FLAG_ACK);
+    ssize_t s2 = sendto(sockfd, &finHeader, CTRL_PACKET_SIZE, 0,
                         (sockaddr*)&receiver_addr, sizeof(receiver_addr));
     if(s2 < 0)
         perror("sendto final ACK failed");

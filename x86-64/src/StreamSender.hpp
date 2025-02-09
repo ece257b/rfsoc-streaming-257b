@@ -1,9 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <string>
 #include "Statistics.hpp"
 #include "DataProcessing.hpp"
 #include "NetworkUtils.hpp"
-#include <string>
+#include "Protocol.hpp"
 
 // - class StreamSender
 //   - This class should contain all protocol specific logic, and delegate data reading and buffering to DataProvider and DataWindow
@@ -28,8 +30,8 @@
 class StreamSender
 {
 private:
-    DataProvider& provider;
-    DataWindow<PacketInfo>& window;
+    DataProvider* provider;
+    DataWindow<PacketInfo>* window;
     SenderStats stats;
     
     sockaddr_in receiver_addr;
@@ -45,7 +47,7 @@ private:
     int processACKs();
     void prepareFINPacket(PacketHeader* header, ControlFlag flag);
 public:
-    StreamSender(DataProvider& provider, DataWindow<PacketInfo>& window, bool debug);
+    StreamSender(DataProvider* provider, DataWindow<PacketInfo>* window, bool debug);
     ~StreamSender();
 
     int setup(int receiver_port, std::string& receiver_ip);
