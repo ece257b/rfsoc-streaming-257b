@@ -6,20 +6,15 @@
 
 class PacketMap: public DataWindow<PacketInfo> {
 private:
-    std::unordered_map<uint32_t, PacketInfo> packetmap;
+    std::unordered_map<uint16_t, PacketInfo> packetmap;
+    std::unordered_map<uint16_t, PacketInfo>::iterator iter;
 public:
     PacketMap() {};
-    ~PacketMap() {
-        for (auto item : packetmap) {
-            free(item.second.packet);
-        }
-    };
+    ~PacketMap() {};
     
     PacketInfo* reserve(uint16_t seq_num) override {
-        Packet* packet = new Packet();
-        packet->header.seq_num = seq_num;
         PacketInfo info;
-        info.packet = packet;
+        info.packet.header.seq_num = seq_num;
         auto it = packetmap.insert(std::make_pair(seq_num, info)).first;
         return &(*it).second;
     };
@@ -37,30 +32,33 @@ public:
     };
 
     bool erase(uint16_t seq_num) override {
-        auto it = packetmap.find(seq_num);
-        if (it != packetmap.end()) {
-            free(it->second.packet);
-            packetmap.erase(it);
-            return true;
-        }
-        return false;
+        return packetmap.erase(seq_num);
     };
-
     bool isFull() override {
         return packetmap.size() >= WINDOW_SIZE;
     };
+    size_t size() override {
+        return packetmap.size();
+    }
 
     bool isEmpty() override {
         return packetmap.empty();
     };
 
-    bool forEachData(WindowCallback callback) override {
-        for (auto item : packetmap) {
-            if (!callback(item.first, &item.second)) {
-                return false;
-            };
-        }
-        return true;
+    // Use unordered_map iteration for efficient iteration
+    // May want to switch to ordered map if we need to guarantee order?
+    void resetIter() override {
+        iter = packetmap.begin();
     }
+    PacketInfo* getIter() override {
+        return &(*iter).second;
+    }
+    bool nextIter() override {
+        iter++;
+        return isIterDone();
+    }
+    bool isIterDone() override {
+        return iter == packetmap.end();
+    };
 };
 

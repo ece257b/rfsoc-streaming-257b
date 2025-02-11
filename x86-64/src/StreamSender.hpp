@@ -30,6 +30,7 @@
 class StreamSender
 {
 private:
+    // TODO template DataProvider and DataWindow. Add setup() methods for each, called by Main
     DataProvider* provider;
     DataWindow<PacketInfo>* window;
     SenderStats stats;

@@ -1,12 +1,12 @@
 #pragma once
 #include <unistd.h>
 #include <stdint.h>
-#include <functional>
+#include <type_traits>
 #include "Protocol.hpp"
 
 // --- Structure to track unacknowledged packets --- 
 struct PacketInfo {
-    Packet* packet;
+    Packet packet;
     size_t packet_size;
     std::chrono::steady_clock::time_point last_sent;
 };
@@ -28,15 +28,19 @@ template <typename DataType>
 class DataWindow {
 public:
     virtual DataType* reserve(uint16_t seq_num) = 0;
-//     - Reserves space for seq_num in window, and returns pointer to the memory. nullptr if no space available
 
+    // API to access elements by sequence number
     virtual bool contains(uint16_t seq_num) = 0;
     virtual DataType* get(uint16_t seq_num) = 0;
     virtual bool erase(uint16_t seq_num) = 0;
 
+    // API to access elements by iteration, order defined by implementation.
+    virtual void resetIter() = 0;
+    virtual DataType* getIter() = 0;
+    virtual bool nextIter() = 0;
+    virtual bool isIterDone() = 0;
+    
     virtual bool isFull() = 0;
     virtual bool isEmpty() = 0;
-
-    typedef std::function<bool(uint32_t, DataType*)> WindowCallback;
-    virtual bool forEachData(WindowCallback callback) = 0;
+    virtual size_t size() = 0; 
 };

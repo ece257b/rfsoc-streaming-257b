@@ -76,13 +76,16 @@ int StreamSender::stream() {
         processACKs();
 
         auto now = steady_clock::now();
-        window->forEachData([&](uint32_t seq_num, PacketInfo* info){
-            auto elapsed = std::chrono::duration_cast<milliseconds>(now - info->last_sent);
-            if (elapsed.count() >= TIMEOUT_MS) {
-                sendPacket(info);
-            }
-            return true;  // Return false if we want to abort retransmitting all packets 
-        });
+        if (!window->isEmpty()) {
+            window->resetIter();
+            do {
+                PacketInfo* info = window->getIter();
+                auto elapsed = std::chrono::duration_cast<milliseconds>(now - info->last_sent);
+                if (elapsed.count() >= TIMEOUT_MS) {
+                    sendPacket(info);
+                }
+            } while (window->nextIter());  // Iterate through entire window
+        }
         
         std::this_thread::sleep_for(milliseconds(10));
 
@@ -92,7 +95,7 @@ int StreamSender::stream() {
 
 PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
     PacketInfo* info = window->reserve(seq_num);
-    Packet* packet = info->packet;
+    Packet* packet = &info->packet;
     PacketHeader* header = &packet->header;
     char* dataBuffer = packet->data;
 
@@ -112,7 +115,7 @@ PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
 }
 
 int StreamSender::sendPacket(PacketInfo* info) {
-    Packet* packet = info->packet;
+    Packet* packet = &info->packet;
     ssize_t sent = sendto(sockfd, (void*)packet, info->packet_size, 0, (sockaddr*)&receiver_addr, sizeof(receiver_addr));
 
     if(sent < 0) {
