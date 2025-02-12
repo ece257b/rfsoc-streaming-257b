@@ -14,13 +14,13 @@ public:
     }
 };
 
-class DummyProcessor : public DataProvider {
+class DummyProcessor : public DataProcessor {
 //  Interface for sequentially processing data
 private:
     bool print;
 public:
     DummyProcessor(bool print) : print(print) {}
-    int processData(size_t size, char* buffer) {
+    int processData(size_t size, char* buffer) override {
         if (print) std::cout << buffer << std::endl;
         return size;
     };
