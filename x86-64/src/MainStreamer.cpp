@@ -38,11 +38,7 @@ int main(int argc, char* argv[]) {
     std::string receiver_ip = args[0];
     int receiver_port = std::atoi(args[1].c_str());
 
-    StreamSender sender = StreamSender(
-        providerFactory(argc, argv),
-        windowFactory(argc, argv),
-        debug
-    );
+    auto sender = StreamSender<DummyProvider, PacketMap>(debug);
 
     sender.setup(receiver_port, receiver_ip);
     sender.stream();

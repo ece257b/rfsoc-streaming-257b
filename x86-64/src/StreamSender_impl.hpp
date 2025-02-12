@@ -1,3 +1,4 @@
+#pragma once
 #include "Statistics.hpp"
 #include "Protocol.hpp"
 #include "StreamSender.hpp"
@@ -8,17 +9,25 @@
 
 using namespace std::chrono;
 
-StreamSender::StreamSender(DataProvider* provider, DataWindow<PacketInfo>* window, bool debug)
-        : provider(provider), window(window), debug(debug) {}
+template<typename DataProviderType, typename DataWindowType>
+StreamSender<DataProviderType, DataWindowType>::StreamSender(bool debug) : debug(debug) {
+    static_assert(std::is_base_of<DataProvider, DataProviderType>::value, "type parameter of this class must derive from DataProvider");
+    static_assert(std::is_base_of<DataWindow<PacketInfo>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
+}
 
-StreamSender::~StreamSender() {}
+template<typename DataProviderType, typename DataWindowType>
+StreamSender<DataProviderType, DataWindowType>::~StreamSender() {
+    
+}
 
-int StreamSender::setup(int receiver_port, std::string& receiver_ip) {
+template<typename DataProviderType, typename DataWindowType>
+int StreamSender<DataProviderType, DataWindowType> ::setup(int receiver_port, std::string& receiver_ip) {
     sockfd = createUDPSocket();
     receiver_addr = setupReceiver(sockfd, receiver_port, receiver_ip);
 }
 
-int StreamSender::handshake() {
+template<typename DataProviderType, typename DataWindowType>
+int StreamSender<DataProviderType, DataWindowType>::handshake() {
     const char* handshake = "STREAM_START";
     auto last_handshake_time = steady_clock::now();
     ssize_t s = sendto(sockfd, handshake, strlen(handshake), 0,
@@ -66,7 +75,8 @@ int StreamSender::handshake() {
     assert(negotiated_packet_size == PACKET_SIZE);
 }
 
-int StreamSender::stream() {
+template<typename DataProviderType, typename DataWindowType>
+int StreamSender<DataProviderType, DataWindowType>::stream() {
     while (base < max_packets) {
         while (next_seq < base + WINDOW_SIZE && next_seq < max_packets) {
             sendPacket(preparePacket(next_seq));
@@ -76,15 +86,15 @@ int StreamSender::stream() {
         processACKs();
 
         auto now = steady_clock::now();
-        if (!window->isEmpty()) {
-            window->resetIter();
+        if (!window.isEmpty()) {
+            window.resetIter();
             do {
-                PacketInfo* info = window->getIter();
+                PacketInfo* info = window.getIter();
                 auto elapsed = std::chrono::duration_cast<milliseconds>(now - info->last_sent);
                 if (elapsed.count() >= TIMEOUT_MS) {
                     sendPacket(info);
                 }
-            } while (window->nextIter());  // Iterate through entire window
+            } while (window.nextIter());  // Iterate through entire window
         }
         
         std::this_thread::sleep_for(milliseconds(10));
@@ -93,8 +103,9 @@ int StreamSender::stream() {
     }
 }
 
-PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
-    PacketInfo* info = window->reserve(seq_num);
+template<typename DataProviderType, typename DataWindowType>
+PacketInfo* StreamSender<DataProviderType, DataWindowType>::preparePacket(uint32_t seq_num) {
+    PacketInfo* info = window.reserve(seq_num);
     Packet* packet = &info->packet;
     PacketHeader* header = &packet->header;
     char* dataBuffer = packet->data;
@@ -104,7 +115,7 @@ PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
     header->control_flags = FLAG_DATA;
     header->checksum = 0;
 
-    size_t size = provider->getData(PAYLOAD_SIZE, dataBuffer);
+    size_t size = provider.getData(PAYLOAD_SIZE, dataBuffer);
     info->packet_size = size;
 
     uint16_t chksum = compute_checksum(packet, DATA_PACKET_SIZE);
@@ -114,7 +125,8 @@ PacketInfo* StreamSender::preparePacket(uint32_t seq_num) {
     return info;
 }
 
-int StreamSender::sendPacket(PacketInfo* info) {
+template<typename DataProviderType, typename DataWindowType>
+int StreamSender<DataProviderType, DataWindowType>::sendPacket(PacketInfo* info) {
     Packet* packet = &info->packet;
     ssize_t sent = sendto(sockfd, (void*)packet, info->packet_size, 0, (sockaddr*)&receiver_addr, sizeof(receiver_addr));
 
@@ -131,7 +143,8 @@ int StreamSender::sendPacket(PacketInfo* info) {
 }
 
 
-int StreamSender::processACKs() {
+template<typename DataProviderType, typename DataWindowType>
+int StreamSender<DataProviderType, DataWindowType>::processACKs() {
     // Process incoming ACK/NACK responses.
     fd_set readfds;
     FD_ZERO(&readfds);
@@ -159,13 +172,13 @@ int StreamSender::processACKs() {
                 if(debug) std::cout << "Received ACK for seq: " << pkt_seq << std::endl;
                 if(pkt_seq >= base) {
                     for(uint32_t seq = base; seq <= pkt_seq; seq++)
-                        window->erase(seq);
+                        window.erase(seq);
                     base = pkt_seq + 1;
                 }
             } else if(ctrl_flag == FLAG_NACK) {
                 if(debug) std::cout << "Received NACK for seq: " << pkt_seq << std::endl;
 
-                PacketInfo* info = window->get(pkt_seq);
+                PacketInfo* info = window.get(pkt_seq);
                 if (info) {
                     sendPacket(info);
                 } else {
@@ -180,7 +193,8 @@ int StreamSender::processACKs() {
     }
 }
 
-int StreamSender::teardown() {
+template<typename DataProviderType, typename DataWindowType>
+int StreamSender<DataProviderType, DataWindowType>::teardown() {
     PacketHeader header;
     prepareFINPacket(&header, FLAG_FIN);
 
@@ -233,7 +247,8 @@ int StreamSender::teardown() {
     return 0;
 }
 
-void StreamSender::prepareFINPacket(PacketHeader* header, ControlFlag flag) {
+template<typename DataProviderType, typename DataWindowType>
+void StreamSender<DataProviderType, DataWindowType>::prepareFINPacket(PacketHeader* header, ControlFlag flag) {
     header->seq_num = htonl(max_packets);
     header->window_size = htons(WINDOW_SIZE);
     header->control_flags = flag;

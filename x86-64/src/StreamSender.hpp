@@ -27,12 +27,13 @@
 //   - teardown()
 //     - FIN/FINACK logic
 
+template<typename DataProviderType, typename DataWindowType>
 class StreamSender
-{
+{   
 private:
     // TODO template DataProvider and DataWindow. Add setup() methods for each, called by Main
-    DataProvider* provider;
-    DataWindow<PacketInfo>* window;
+    DataProviderType provider;
+    DataWindowType window;
     SenderStats stats;
     
     sockaddr_in receiver_addr;
@@ -48,10 +49,12 @@ private:
     int processACKs();
     void prepareFINPacket(PacketHeader* header, ControlFlag flag);
 public:
-    StreamSender(DataProvider* provider, DataWindow<PacketInfo>* window, bool debug);
+    StreamSender(bool debug);
     ~StreamSender();
 
     int setup(int receiver_port, std::string& receiver_ip);
     int stream();
     int teardown();
 };
+
+#include "StreamSender_impl.hpp"  // Include template definitions
