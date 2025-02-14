@@ -10,6 +10,7 @@ public:
     int getData(size_t size, char* buffer) override {
         char fill_char = 'A' + (count % 26);
         std::memset(buffer, fill_char, size);
+        count++;
         return size;
     }
 };
@@ -19,7 +20,7 @@ class DummyProcessor : public DataProcessor {
 private:
     bool print;
 public:
-    DummyProcessor(bool print) : print(print) {}
+    DummyProcessor(bool print=true) : print(print) {}
     int processData(size_t size, char* buffer) override {
         if (print) std::cout << buffer << std::endl;
         return size;
