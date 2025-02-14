@@ -2,7 +2,7 @@
 
 # Compiler and flags
 CXX      := g++
-CXXFLAGS := -O2 -std=c++11 -Wall -Wextra 
+CXXFLAGS := -std=c++11 -Wall -Wextra 
 
 # Automatically find all .cpp and .hpp files
 SRCS := $(wildcard *.cpp)

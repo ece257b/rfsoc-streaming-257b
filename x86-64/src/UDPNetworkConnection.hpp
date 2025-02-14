@@ -1,3 +1,5 @@
+#pragma once
+#include <cstring>
 #include <string>
 #include <stdio.h>
 #include "NetworkUtils.hpp"

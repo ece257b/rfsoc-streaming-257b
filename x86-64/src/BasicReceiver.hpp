@@ -22,7 +22,7 @@ public:
         int seq_num = 0;
 
         while (true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             std::cout << "Current seq " << seq_num << std::endl;
             ssize_t recvBytes = conn.receive(&recvBuffer, sizeof(recvBuffer));
@@ -30,7 +30,7 @@ public:
                 continue;
             }
 
-            std::cout << "Received " << recvBytes << std::endl;
+            std::cout << "Received " << recvBytes << " bytes" << std::endl;
             
             if (!verifyChecksum(&recvBuffer, recvBytes)) {
                 std::cout << "Invalid Checksum! Ignoring." << std::endl;
@@ -45,6 +45,7 @@ public:
                 processor.processData(sizeof(recvBuffer.data), recvBuffer.data);
                 seq_num += 1;
             } else if (ctrl_flag == FLAG_FIN) {
+                std::cout << "Received FIN" << std::endl;
                 break;
             }
 

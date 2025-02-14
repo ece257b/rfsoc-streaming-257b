@@ -1,5 +1,5 @@
 #pragma once
-
+#include <cstring>
 #include <stdint.h>
 #include <iostream>
 #include <fstream>

@@ -1,5 +1,6 @@
 #include <chrono>
 #include <thread>
+#include <cstring>
 #include "Protocol.hpp"
 #include "DataProcessing.hpp"
 #include "NetworkConnection.hpp"
@@ -23,7 +24,7 @@ public:
         Packet recvBuffer;
 
         while (seq_num < max_packets) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             std::cout << "Current seq " << seq_num << std::endl;
 
@@ -37,7 +38,7 @@ public:
                 continue;
             }
 
-            if (conn.ready({1, 0})) {   // Wait 1s for timeout
+            if (conn.ready({0, 10000})) {   // Wait 10000us for timeout
                 size_t bytesReceived = conn.receive(&recvBuffer, sizeof(recvBuffer));
 
                 if (!verifyChecksum(&recvBuffer, bytesReceived)) {
@@ -61,6 +62,17 @@ public:
             }
             // Packet timed out. Next iteration of loop will Send same packet.
         };
+
+        info = PacketInfo();
+        info.packet.header.control_flags = FLAG_FIN;
+        info.packet_size = CTRL_PACKET_SIZE;
+        info.packet.header.checksum = 0;
+
+        uint16_t chksum = compute_checksum(&info.packet, DATA_PACKET_SIZE);
+        info.packet.header.checksum = htons(chksum);
+        std::cout << "Sending FIN!" << std::endl;
+        sendPacket(info);
+
         // TODO: FINACK etc
         teardown();
     }
