@@ -24,6 +24,7 @@ public:
         Packet recvBuffer;
 
         while (seq_num < max_packets) {
+            // @Kishore you may need to comment out or add some #ifdef guards around thread sleep calls
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             std::cout << "Current seq " << seq_num << std::endl;
@@ -38,7 +39,8 @@ public:
                 std::cerr << "Sending Packet Failed! Retrying" << std::endl;
                 continue;
             }
-
+            
+            // @Kishore not exactly sure how waiting for timout would work on FPGA.. 
             if (conn.ready({0, 10000})) {   // Wait 10000us for timeout
                 size_t bytesReceived = conn.receive(&recvBuffer, sizeof(recvBuffer));
 
