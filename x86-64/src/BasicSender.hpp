@@ -27,9 +27,10 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             std::cout << "Current seq " << seq_num << std::endl;
+            // std::cout << "Current seq " << seq_num << " Info Seq " << htonl(info.packet.header.seq_num) << std::endl;
 
             // No need to prepare packet again if we already have prepared it in previous iter.
-            if (info.packet.header.seq_num != seq_num) {
+            if (ntohl(info.packet.header.seq_num) != seq_num) {
                 preparePacket(&info, seq_num);
             }
             bool success = sendPacket(info);
