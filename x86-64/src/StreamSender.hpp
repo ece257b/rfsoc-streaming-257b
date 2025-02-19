@@ -6,6 +6,7 @@
 #include "DataProcessing.hpp"
 #include "NetworkUtils.hpp"
 #include "Protocol.hpp"
+#include "NetworkConnection.hpp"
 
 // - class StreamSender
 //   - This class should contain all protocol specific logic, and delegate data reading and buffering to DataProvider and DataWindow
@@ -27,17 +28,13 @@
 //   - teardown()
 //     - FIN/FINACK logic
 
-template<typename DataProviderType, typename DataWindowType>
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 class StreamSender
 {   
 private:
-    // TODO template DataProvider and DataWindow. Add setup() methods for each, called by Main
-    DataProviderType provider;
     DataWindowType window;
     SenderStats stats;
     
-    sockaddr_in receiver_addr;
-    int sockfd = 0;
     bool debug = false;
     uint32_t base = 0;      // lowest unacknowledged sequence number
     uint32_t next_seq = 0;  // next sequence number to send
@@ -52,9 +49,11 @@ public:
     StreamSender(bool debug);
     ~StreamSender();
 
-    int setup(int receiver_port, std::string& receiver_ip);
     int stream();
     int teardown();
+
+    NetworkConnectionType conn;
+    DataProviderType provider;
 };
 
 #include "StreamSender_impl.hpp"  // Include template definitions

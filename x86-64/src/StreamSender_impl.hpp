@@ -9,32 +9,27 @@
 
 using namespace std::chrono;
 
-template<typename DataProviderType, typename DataWindowType>
-StreamSender<DataProviderType, DataWindowType>::StreamSender(bool debug) : debug(debug) {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::StreamSender(bool debug) : debug(debug) {
     static_assert(std::is_base_of<DataProvider, DataProviderType>::value, "type parameter of this class must derive from DataProvider");
     static_assert(std::is_base_of<DataWindow<PacketInfo>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
+    static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
 }
 
-template<typename DataProviderType, typename DataWindowType>
-StreamSender<DataProviderType, DataWindowType>::~StreamSender() {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::~StreamSender() {
     
 }
 
-template<typename DataProviderType, typename DataWindowType>
-int StreamSender<DataProviderType, DataWindowType> ::setup(int receiver_port, std::string& receiver_ip) {
-    sockfd = createUDPSocket();
-    receiver_addr = setupReceiver(sockfd, receiver_port, receiver_ip);
-}
-
-template<typename DataProviderType, typename DataWindowType>
-int StreamSender<DataProviderType, DataWindowType>::handshake() {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::handshake() {
     const char* handshake = "STREAM_START";
     auto last_handshake_time = steady_clock::now();
-    ssize_t s = sendto(sockfd, handshake, strlen(handshake), 0,
-                       (sockaddr*)&receiver_addr, sizeof(receiver_addr));
+    ssize_t s = conn.send(handshake, strlen(handshake));
+
     if(s < 0) {
         perror("handshake send failed");
-        close(sockfd);
+        conn.close();
         exit(EXIT_FAILURE);
     }
     if(debug)
@@ -46,15 +41,15 @@ int StreamSender<DataProviderType, DataWindowType>::handshake() {
         auto now = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(now - last_handshake_time).count();
         if(elapsed >= HANDSHAKE_TIMEOUT_MS) {
-            s = sendto(sockfd, handshake, strlen(handshake), 0,
-                       (sockaddr*)&receiver_addr, sizeof(receiver_addr));
+            s = conn.send(handshake, strlen(handshake));
             if(s < 0)
                 perror("handshake resend failed");
             else if(debug)
                 std::cout << "Resent handshake message..." << std::endl;
             last_handshake_time = now;
         }
-        ssize_t n = recvfrom(sockfd, neg_buf, sizeof(neg_buf), 0, nullptr, nullptr);
+        // ssize_t n = recvfrom(sockfd, neg_buf, sizeof(neg_buf), 0, nullptr, nullptr);
+        ssize_t n = conn.receive(neg_buf, neg_buf); // ?
         if(n == 4) {
             handshake_received = true;
             break;
@@ -75,8 +70,8 @@ int StreamSender<DataProviderType, DataWindowType>::handshake() {
     assert(negotiated_packet_size == PACKET_SIZE);
 }
 
-template<typename DataProviderType, typename DataWindowType>
-int StreamSender<DataProviderType, DataWindowType>::stream() {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::stream() {
     while (base < max_packets) {
         while (next_seq < base + WINDOW_SIZE && next_seq < max_packets) {
             sendPacket(preparePacket(next_seq));
@@ -103,8 +98,8 @@ int StreamSender<DataProviderType, DataWindowType>::stream() {
     }
 }
 
-template<typename DataProviderType, typename DataWindowType>
-PacketInfo* StreamSender<DataProviderType, DataWindowType>::preparePacket(uint32_t seq_num) {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::preparePacket(uint32_t seq_num) {
     PacketInfo* info = window.reserve(seq_num);
     Packet* packet = &info->packet;
     PacketHeader* header = &packet->header;
@@ -125,10 +120,9 @@ PacketInfo* StreamSender<DataProviderType, DataWindowType>::preparePacket(uint32
     return info;
 }
 
-template<typename DataProviderType, typename DataWindowType>
-int StreamSender<DataProviderType, DataWindowType>::sendPacket(PacketInfo* info) {
-    Packet* packet = &info->packet;
-    ssize_t sent = sendto(sockfd, (void*)packet, info->packet_size, 0, (sockaddr*)&receiver_addr, sizeof(receiver_addr));
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendPacket(PacketInfo* info) {
+    ssize_t sent = conn.send(&info->packet, info->packet_size);
 
     if(sent < 0) {
         perror("sendto failed");
@@ -143,22 +137,12 @@ int StreamSender<DataProviderType, DataWindowType>::sendPacket(PacketInfo* info)
 }
 
 
-template<typename DataProviderType, typename DataWindowType>
-int StreamSender<DataProviderType, DataWindowType>::processACKs() {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::processACKs() {
     // Process incoming ACK/NACK responses.
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(sockfd, &readfds);
-    timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 100000; // 100 ms
-    int ret = select(sockfd+1, &readfds, nullptr, nullptr, &tv);
-    if(ret > 0 && FD_ISSET(sockfd, &readfds)) {
+    if (conn.ready({0, 100000})) {
         Packet packet;
-        sockaddr_in sender_addr;
-        socklen_t sender_addr_len = sizeof(sender_addr);
-        ssize_t recv_len = recvfrom(sockfd, &packet, sizeof(packet), 0,
-                                    (sockaddr*)&sender_addr, &sender_addr_len);
+        ssize_t recv_len = conn.receive(&packet, sizeof(packet));
         if(recv_len >= HEADER_SIZE) {
             uint32_t pkt_seq = ntohl(packet.header.seq_num);
             uint8_t ctrl_flag = packet.header.control_flags;
@@ -193,8 +177,8 @@ int StreamSender<DataProviderType, DataWindowType>::processACKs() {
     }
 }
 
-template<typename DataProviderType, typename DataWindowType>
-int StreamSender<DataProviderType, DataWindowType>::teardown() {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::teardown() {
     PacketHeader header;
     prepareFINPacket(&header, FLAG_FIN);
 
@@ -202,26 +186,15 @@ int StreamSender<DataProviderType, DataWindowType>::teardown() {
     // counter for retransmission of FIN-ACK
     int fin_ack_retransmissions = 0;
     while(!fin_ack_received && fin_ack_retransmissions < 5) {
-        ssize_t s = sendto(sockfd, &header, CTRL_PACKET_SIZE, 0,
-                            (sockaddr*)&receiver_addr, sizeof(receiver_addr));
+        ssize_t s = conn.send(&header, sizeof(header));
         if(s < 0)
             perror("sendto FIN failed");
         else if(debug)
             std::cout << "Sent FIN packet" << std::endl;
-        // Wait for FIN-ACK.
-        fd_set readfds;
-        FD_ZERO(&readfds);
-        FD_SET(sockfd, &readfds);
-        timeval tv;
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
-        int ret = select(sockfd+1, &readfds, nullptr, nullptr, &tv);
-        if(ret > 0 && FD_ISSET(sockfd, &readfds)) {
+        
+        if (conn.ready({1, 0})) {
             char ack_buf[DATA_PACKET_SIZE];
-            sockaddr_in ack_addr;
-            socklen_t ack_addr_len = sizeof(ack_addr);
-            ssize_t r = recvfrom(sockfd, ack_buf, sizeof(ack_buf), 0,
-                                    (sockaddr*)&ack_addr, &ack_addr_len);
+            ssize_t r = conn.receive(ack_buf, sizeof(ack_buf));
             if(r >= HEADER_SIZE) {
                 PacketHeader* ack_hdr = reinterpret_cast<PacketHeader*>(ack_buf);
                 if(ack_hdr->control_flags == FLAG_FIN_ACK) {
@@ -236,19 +209,19 @@ int StreamSender<DataProviderType, DataWindowType>::teardown() {
     }
     PacketHeader finHeader;
     prepareFINPacket(&finHeader, FLAG_ACK);
-    ssize_t s2 = sendto(sockfd, &finHeader, CTRL_PACKET_SIZE, 0,
-                        (sockaddr*)&receiver_addr, sizeof(receiver_addr));
+    ssize_t s2 = conn.send(&finHeader, sizeof(PacketHeader));
     if(s2 < 0)
         perror("sendto final ACK failed");
     else if(debug)
         std::cout << "Sent final ACK for FIN" << std::endl;
 
-    close(sockfd);
+    conn.close();
     return 0;
 }
 
-template<typename DataProviderType, typename DataWindowType>
-void StreamSender<DataProviderType, DataWindowType>::prepareFINPacket(PacketHeader* header, ControlFlag flag) {
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+void StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::prepareFINPacket(
+        PacketHeader* header, ControlFlag flag) {
     header->seq_num = htonl(max_packets);
     header->window_size = htons(WINDOW_SIZE);
     header->control_flags = flag;

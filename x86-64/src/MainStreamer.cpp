@@ -2,6 +2,7 @@
 #include "StreamSender.hpp"
 #include "DataWindow.hpp"
 #include "DummyData.hpp"
+#include "UDPNetworkConnection.hpp"
 
 DataProvider* providerFactory(int argc, char* argv[]) {
     // TODO file IO
@@ -38,9 +39,8 @@ int main(int argc, char* argv[]) {
     std::string receiver_ip = args[0];
     int receiver_port = std::atoi(args[1].c_str());
 
-    auto sender = StreamSender<DummyProvider, PacketMap>(debug);
-
-    sender.setup(receiver_port, receiver_ip);
+    auto sender = StreamSender<DummyProvider, PacketMap, UDPStreamSender>(debug);
+    sender.conn.setup(receiver_port, receiver_ip);
     sender.stream();
     sender.teardown();
 }
