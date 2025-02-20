@@ -12,21 +12,29 @@
 //   - sendACK()
 //   - teardown()
 
+
+template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 class StreamReceiver
 {
-private:
-    DataProcessor& processor;
-    DataWindow& window;
-
-    int receiveData();
-    int sendACK();
-    int sendNACK();
 
 public:
-    StreamReceiver(/* args */);
+    StreamReceiver(bool debug);
     ~StreamReceiver();
 
-    int setup();
-    int receiveStream();
+    int receiveData();
     int teardown();
+
+    NetworkConnectionType conn;
+    DataProviderType provider;
+private:
+    DataWindowType window;
+    SenderStats stats;
+    
+    bool debug = false;
+    uint32_t base = 0;      // lowest unacknowledged sequence number
+    uint32_t expected_seq = 0;  // next sequence number to send
+
+    void handshake();
+    int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK);
+    int processOutOfOrder(); 
 };
