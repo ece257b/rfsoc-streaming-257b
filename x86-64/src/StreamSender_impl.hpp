@@ -24,9 +24,8 @@ StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::~StreamSe
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::handshake() {
-    const char* handshake = "STREAM_START";
     auto last_handshake_time = steady_clock::now();
-    ssize_t s = conn.send(handshake, strlen(handshake));
+    ssize_t s = conn.send((void*) HANDSHAKE, HANDSHAKE_SIZE);
 
     if(s < 0) {
         perror("handshake send failed");
@@ -42,7 +41,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
         auto now = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(now - last_handshake_time).count();
         if(elapsed >= HANDSHAKE_TIMEOUT_MS) {
-            s = conn.send(handshake, strlen(handshake));
+            ssize_t s = conn.send((void*) HANDSHAKE, HANDSHAKE_SIZE);
             if(s < 0)
                 perror("handshake resend failed");
             else if(debug)
@@ -50,7 +49,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
             last_handshake_time = now;
         }
         // ssize_t n = recvfrom(sockfd, neg_buf, sizeof(neg_buf), 0, nullptr, nullptr);
-        ssize_t n = conn.receive(neg_buf, neg_buf); // ?
+        ssize_t n = conn.receive(neg_buf, sizeof(neg_buf)); // ?
         if(n == 4) {
             handshake_received = true;
             break;
@@ -69,10 +68,14 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
     
     assert(negotiated_buffer_size == BUFFER_SIZE);
     assert(negotiated_packet_size == PACKET_SIZE);
+    return 0;
 }
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::stream() {
+    conn.open();
+    handshake();
+
     int count = 0;
     while (base < max_packets) {
         while (next_seq < base + WINDOW_SIZE && next_seq < max_packets) {

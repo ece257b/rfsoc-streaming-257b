@@ -4,6 +4,8 @@ x86-64/src/Streamer
 x86-64/src/Receiver
 x86-64/src/StreamReceiver
 x86-64/src/StreamSender
+x86-64/src/BasicStreamer
+x86-64/src/BasicReceiver
 x86-64/initial/StreamReceiver
 x86-64/initial/StreamSender
 

@@ -7,7 +7,7 @@
 
 int main(int argc, char* argv[]) {
     // --- Command-line parsing ---
-    // Usage: ./Receiver <receiver_port> [filename] [--debug] [--statistics]
+    // Usage: ./StreamReceiver <receiver_port> [filename] [--debug] [--statistics]
 
     std::cout << "This is main receiver" << std::endl;
 
@@ -26,8 +26,8 @@ int main(int argc, char* argv[]) {
     }
     UNUSED(stats);
 
-    if(args.size() < 2) {
-        std::cerr << "Usage: " << argv[0] << " <receiver_ip> <receiver_port> [filename] [--debug] [--statistics]" << std::endl;
+    if(args.size() < 1) {
+        std::cerr << "Usage: " << argv[0] << " <receiver_port> [filename] [--debug] [--statistics]" << std::endl;
         return EXIT_FAILURE;
     }
     int receiver_port = std::atoi(args[0].c_str());

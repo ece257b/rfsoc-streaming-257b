@@ -50,6 +50,7 @@ public:
     bool open() override {
         sockfd = createUDPSocket();
         receiver_addr = setupReceiver(sockfd, receiver_port, receiver_ip);
+        std::cout << "Sender Bound to " << receiver_ip << " " << receiver_port << std::endl;
         return true;
     }
 

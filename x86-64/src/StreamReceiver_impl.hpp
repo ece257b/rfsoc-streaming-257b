@@ -132,18 +132,23 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::handshake() {
     // === Negotiation Handshake ===
-    char handshake_buf[64];
-    ssize_t n = conn.receive(&handshake_buf, sizeof(handshake_buf));
-    if(n < 0) {
-        perror("recvfrom handshake failed");
-        teardown();
-        exit(EXIT_FAILURE);
+    while (true) {
+        char handshake_buf[64];
+        ssize_t n = conn.receive(handshake_buf, sizeof(handshake_buf));
+        if(n < 0) {
+            std::this_thread::sleep_for(milliseconds(100));
+            if (debug) std::cout << "No handshake received" << std::endl;
+            continue;
+        }
+        if(n != sizeof(HANDSHAKE) || strcmp(handshake_buf, HANDSHAKE)) {
+            std::cerr << "Error: Unexpected handshake message: " << handshake_buf << std::endl;
+            teardown();
+            exit(EXIT_FAILURE);
+            return 1;
+        }
+        break;
     }
-    if(n != sizeof(HANDSHAKE) || !strcmp(handshake_buf, HANDSHAKE)) {
-        std::cerr << "Error: Unexpected handshake message: " << handshake_buf << std::endl;
-        teardown();
-        exit(EXIT_FAILURE);
-    }
+
     if(debug)
         std::cout << "Received handshake from sender. Sending negotiation packet..." << std::endl;
     // Prepare negotiation packet: two shorts (buffer size and packet size) in network order.

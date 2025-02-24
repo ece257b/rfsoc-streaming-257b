@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <fstream>
+#include <cstdio>
 
 
 const int PAYLOAD_SIZE       = 512;  // bytes of payload in DATA packets
@@ -21,13 +22,14 @@ const int CTRL_PACKET_SIZE   = HEADER_SIZE;                 // control packets c
 
 const int WINDOW_SIZE        = 6666;     // sliding window size
 const int DEFAULT_MAX_PACKETS = 10;   // default number of packets in dummy mode
-const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
+const int TIMEOUT_MS         = 10000;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
 const int BUFFER_SIZE = 1024;
 const int PACKET_SIZE = DATA_PACKET_SIZE;
 
-const char HANDSHAKE[13]  = "STREAM_START";
+constexpr char HANDSHAKE[13]  = "STREAM_START";
+constexpr size_t HANDSHAKE_SIZE = sizeof(HANDSHAKE);
 
 // --- Control flag definitions ---
 enum ControlFlag {
