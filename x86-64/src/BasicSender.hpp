@@ -18,7 +18,7 @@ public:
 
     int stream() {
         conn.open();
-        int seq_num = 0;
+        uint32_t seq_num = 0;
         PacketInfo info;
         info.packet.header.seq_num = -1;    // init to -1 so first packet gets prepared.
         Packet recvBuffer;

@@ -1,5 +1,5 @@
 #include <memory>
-#include "StreamSender.hpp"
+#include "StreamReceiver.hpp"
 #include "DataWindow.hpp"
 #include "DummyData.hpp"
 #include "UDPNetworkConnection.hpp"
@@ -7,9 +7,9 @@
 
 int main(int argc, char* argv[]) {
     // --- Command-line parsing ---
-    // Usage: ./StreamSender <receiver_ip> <receiver_port> [filename] [--debug] [--statistics]
+    // Usage: ./Receiver <receiver_port> [filename] [--debug] [--statistics]
 
-    std::cout << "This is main streamer" << std::endl;
+    std::cout << "This is main receiver" << std::endl;
 
     bool debug = false;
     bool stats = false;
@@ -30,11 +30,10 @@ int main(int argc, char* argv[]) {
         std::cerr << "Usage: " << argv[0] << " <receiver_ip> <receiver_port> [filename] [--debug] [--statistics]" << std::endl;
         return EXIT_FAILURE;
     }
-    std::string receiver_ip = args[0];
-    int receiver_port = std::atoi(args[1].c_str());
+    int receiver_port = std::atoi(args[0].c_str());
 
-    auto sender = StreamSender<DummyProvider, PacketMap<PacketInfo>, UDPStreamSender>(debug);
-    sender.conn.setup(receiver_port, receiver_ip);
-    sender.stream();
-    sender.teardown();
+    auto receiver = StreamReceiver<DummyProcessor, PacketMap<Packet>, UDPStreamReceiver>(debug);
+    receiver.conn.setup(receiver_port);
+    receiver.receiveData();
+    receiver.teardown();
 }

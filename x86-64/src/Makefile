@@ -15,8 +15,10 @@ RECEIVER_MAIN := MainReceiver.cpp
 STREAMER_BASIC_MAIN := MainBasicSender.cpp
 RECEIVER_BASIC_MAIN := MainBasicReceiver.cpp
 
+FPGA_STREAMER_TOP := FPGABasicTop.cpp
+
 # Filter out main files from SRCS to avoid duplicate compilation
-COMMON_SRCS := $(filter-out ${STREAMER_BASIC_MAIN} ${RECEIVER_BASIC_MAIN} $(STREAMER_MAIN) $(RECEIVER_MAIN), $(SRCS))
+COMMON_SRCS := $(filter-out ${STREAMER_BASIC_MAIN} ${RECEIVER_BASIC_MAIN} $(STREAMER_MAIN) $(RECEIVER_MAIN) ${FPGA_STREAMER_TOP}, $(SRCS))
 
 # Output executables
 STREAMER := Streamer

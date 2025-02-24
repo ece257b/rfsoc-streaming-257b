@@ -1,5 +1,6 @@
 #pragma once
 #include "DataProcessing.hpp"
+#include "Statistics.hpp"
 
 // - class StreamReceiver
 //   - setup()
@@ -13,7 +14,7 @@
 //   - teardown()
 
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 class StreamReceiver
 {
 
@@ -25,16 +26,18 @@ public:
     int teardown();
 
     NetworkConnectionType conn;
-    DataProviderType provider;
+    DataProcessorType processor;
 private:
     DataWindowType window;
-    SenderStats stats;
+    // ReceiverStats stats;
     
     bool debug = false;
     uint32_t base = 0;      // lowest unacknowledged sequence number
     uint32_t expected_seq = 0;  // next sequence number to send
 
-    void handshake();
+    int handshake();
     int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK);
     int processOutOfOrder(); 
 };
+
+#include "StreamReceiver_impl.hpp"

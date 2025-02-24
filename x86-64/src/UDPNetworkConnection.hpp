@@ -50,6 +50,7 @@ public:
     bool open() override {
         sockfd = createUDPSocket();
         receiver_addr = setupReceiver(sockfd, receiver_port, receiver_ip);
+        return true;
     }
 
 protected:
@@ -80,6 +81,8 @@ public:
             exit(EXIT_FAILURE);
         }
         std::cout << "Receiver listening on port " << receiver_port << std::endl;
+        
+        return true;
     }
 
     ssize_t receive(void* buffer, size_t len) override {

@@ -3,6 +3,7 @@
 #include "Protocol.hpp"
 #include "StreamSender.hpp"
 #include "NetworkUtils.hpp"
+#include "cmn.h"
 #include <chrono>
 #include <thread>
 #include <cassert>
@@ -72,6 +73,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::stream() {
+    int count = 0;
     while (base < max_packets) {
         while (next_seq < base + WINDOW_SIZE && next_seq < max_packets) {
             sendPacket(preparePacket(next_seq));
@@ -96,6 +98,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
 
         stats.report();
     }
+    return count;
 }
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
@@ -166,15 +169,19 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
                 if (info) {
                     sendPacket(info);
                 } else {
-                    std::cout << "FATAL ERROR: Window did not have NACKd packet " << pkt_seq << std::endl;
+                    std::cerr << "FATAL ERROR: Window did not have NACKd packet " << pkt_seq << std::endl;
+                    return false;
                 }
             } else {
                 if (debug) {
                     std::cout << "Something wrong!" << std::endl;
                 }
+                return false;
             }
         }
+        return true;
     }
+    return false;
 }
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>

@@ -27,6 +27,8 @@ const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 const int BUFFER_SIZE = 1024;
 const int PACKET_SIZE = DATA_PACKET_SIZE;
 
+const char HANDSHAKE[13]  = "STREAM_START";
+
 // --- Control flag definitions ---
 enum ControlFlag {
     FLAG_DATA     = 0,
