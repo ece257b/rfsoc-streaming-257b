@@ -37,6 +37,7 @@ private:
 
     int handshake();
     int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK);
+    bool sendFINACK(uint32_t seq_num);
     int processOutOfOrder(); 
 };
 

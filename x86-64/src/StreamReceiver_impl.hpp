@@ -80,6 +80,9 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
             if(expected_seq > 0 && (expected_seq % pkt_window == 0)) {  // % pkt_window may not be best
                 sendACK(expected_seq); // expected_seq - 1 ??
             }
+        } else if (ctrl_flag == FLAG_FIN) {
+            sendFINACK(seq_num);
+            running = false;
         }
     }
     return count;
@@ -170,8 +173,26 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 }
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
+bool StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::sendFINACK(uint32_t seq_num) {
+    Packet packet;
+    for (int i = 0; i < 5; i++) {
+        sendACK(seq_num, FLAG_FIN_ACK);
+
+        if (conn.ready({1, 0})) {
+            ssize_t recv_len = conn.receive(&packet, sizeof(packet));
+            if (recv_len >= HEADER_SIZE && packet.header.control_flags == FLAG_ACK && verifyChecksum(&packet, recv_len)) {
+
+                if(debug)
+                    std::cout << "Received final ACK." << std::endl;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::teardown() {
-    // processor.close(); // ?
     window.clear();
     conn.close();
     return 0;
