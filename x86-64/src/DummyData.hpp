@@ -22,7 +22,10 @@ private:
 public:
     DummyProcessor(bool print=true) : print(print) {}
     int processData(size_t size, char* buffer) override {
-        if (print) std::cout << buffer << std::endl;
+        if (print) {
+            std::cout.write(buffer, size);
+            std::cout << std::endl;
+        }
         return size;
     };
 };

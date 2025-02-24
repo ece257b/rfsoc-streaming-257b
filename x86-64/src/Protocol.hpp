@@ -22,7 +22,7 @@ const int CTRL_PACKET_SIZE   = HEADER_SIZE;                 // control packets c
 
 const int WINDOW_SIZE        = 6666;     // sliding window size
 const int DEFAULT_MAX_PACKETS = 10;   // default number of packets in dummy mode
-const int TIMEOUT_MS         = 10000;   // retransmission timeout (ms)
+const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
 const int BUFFER_SIZE = 1024;
@@ -75,8 +75,8 @@ inline uint16_t compute_checksum(const void* data, size_t len) {
 inline bool verifyChecksum(Packet* packet, ssize_t length) {
     uint16_t temp = packet->header.checksum;
     packet->header.checksum = 0;
-    uint16_t computed = compute_checksum(packet, length);
-    bool match = (temp == htons(computed));
+    uint16_t computed = htons(compute_checksum(packet, length));
+    bool match = (temp == computed);
     packet->header.checksum = temp;
     return match;
 }

@@ -117,9 +117,9 @@ PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType
     header->checksum = 0;
 
     size_t size = provider.getData(PAYLOAD_SIZE, dataBuffer);
-    info->packet_size = size;
+    info->data_size = size;
 
-    uint16_t chksum = compute_checksum(packet, DATA_PACKET_SIZE);
+    uint16_t chksum = compute_checksum(packet, info->packet_size());
     uint16_t net_chksum = htons(chksum);
     header->checksum = net_chksum;
 
@@ -128,18 +128,18 @@ PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendPacket(PacketInfo* info) {
-    ssize_t sent = conn.send(&info->packet, info->packet_size);
+    ssize_t sent = conn.send(&info->packet, info->packet_size());
 
     if(sent < 0) {
         perror("sendto failed");
     } else {
         if(debug)
-            std::cout << "Sent DATA packet seq: " << next_seq << std::endl;
+            std::cout << "Sent DATA packet seq: " << next_seq << " Len: " << sent << std::endl;
         stats.record_packet(sent);
     }
 
     info->last_sent = steady_clock::now();
-    return info->packet_size;
+    return info->packet_size();
 }
 
 

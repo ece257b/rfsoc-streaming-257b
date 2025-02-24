@@ -68,10 +68,10 @@ public:
 
         info = PacketInfo();
         info.packet.header.control_flags = FLAG_FIN;
-        info.packet_size = CTRL_PACKET_SIZE;
+        info.data_size = 0;
         info.packet.header.checksum = 0;
 
-        uint16_t chksum = compute_checksum(&info.packet, DATA_PACKET_SIZE);
+        uint16_t chksum = compute_checksum(&info.packet, info.packet_size());
         info.packet.header.checksum = htons(chksum);
         std::cout << "Sending FIN!" << std::endl;
         sendPacket(info);
@@ -87,9 +87,9 @@ private:
     size_t max_packets;
 
     bool sendPacket(PacketInfo& info) {
-        size_t bytesSent = conn.send(&info.packet, info.packet_size);
-        if (bytesSent != info.packet_size) {
-            std::cerr << "Bytes sent did not match packet size! " << bytesSent << " != " << info.packet_size << std::endl;
+        size_t bytesSent = conn.send(&info.packet, info.packet_size());
+        if (bytesSent != info.packet_size()) {
+            std::cerr << "Bytes sent did not match packet size! " << bytesSent << " != " << info.packet_size() << std::endl;
             return false;
         }
         return true;
@@ -106,9 +106,9 @@ private:
         header->checksum = 0;
 
         size_t size = provider.getData(PAYLOAD_SIZE, dataBuffer);
-        info->packet_size = size + HEADER_SIZE;
+        info->data_size = size;
 
-        uint16_t chksum = compute_checksum(packet, DATA_PACKET_SIZE);
+        uint16_t chksum = compute_checksum(packet, info->packet_size());
         uint16_t net_chksum = htons(chksum);
         header->checksum = net_chksum;
 

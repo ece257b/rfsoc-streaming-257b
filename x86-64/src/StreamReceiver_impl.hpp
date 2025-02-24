@@ -44,7 +44,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 
         if (!verifyChecksum(&packet, recv_len)) {
             if(debug)
-                std::cerr << "Invalid checksum for packet seq: " << seq_num << ", discarding." << std::endl;
+                std::cerr << "Invalid checksum for packet seq " << seq_num << " Len: " << recv_len << ", discarding." << std::endl;
             continue;
         }
 
