@@ -4,10 +4,13 @@
 
 class DummyProvider : public DataProvider {
 // Interface to read data sequentially. Can use for dummy, file, or stream
-private:
-    uint32_t count = 0;
 public:
+    uint32_t count = 0;
+    uint32_t total_packets = -1;
     int getData(size_t size, char* buffer) override {
+        if (count >= total_packets) {
+            return 0;
+        }
         char fill_char = 'A' + (count % 26);
         std::memset(buffer, fill_char, size);
         count++;
@@ -17,10 +20,9 @@ public:
 
 class DummyProcessor : public DataProcessor {
 //  Interface for sequentially processing data
-private:
-    bool print;
 public:
     DummyProcessor(bool print=true) : print(print) {}
+    bool print;
     int processData(size_t size, char* buffer) override {
         if (print) {
             std::cout.write(buffer, size);

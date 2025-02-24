@@ -31,12 +31,12 @@ public:
 template <typename DataType>
 class DataWindow {
 public:
-    virtual DataType* reserve(uint16_t seq_num) = 0;
+    virtual DataType* reserve(uint32_t seq_num) = 0;
 
     // API to access elements by sequence number
-    virtual bool contains(uint16_t seq_num) = 0;
-    virtual DataType* get(uint16_t seq_num) = 0;
-    virtual bool erase(uint16_t seq_num) = 0;
+    virtual bool contains(uint32_t seq_num) = 0;
+    virtual DataType* get(uint32_t seq_num) = 0;
+    virtual bool erase(uint32_t seq_num) = 0;
 
     // API to access elements by iteration, order defined by implementation.
     virtual void resetIter() = 0;

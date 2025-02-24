@@ -54,7 +54,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
             handshake_received = true;
             break;
         }
-        std::this_thread::sleep_for(milliseconds(10));
+        std::this_thread::sleep_for(milliseconds(RETRY_MS));
     }
     // Parse negotiation packet: two shorts (buffer size, packet size) in network order.
     uint16_t net_buffer_size, net_packet_size;
@@ -77,9 +77,15 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
     handshake();
 
     int count = 0;
+    bool done_streaming = false;
     while (base < max_packets) {
-        while (next_seq < base + WINDOW_SIZE && next_seq < max_packets) {
-            sendPacket(preparePacket(next_seq));
+        while (next_seq < base + WINDOW_SIZE && next_seq < max_packets && !done_streaming) {
+            PacketInfo* info = preparePacket(next_seq);
+            if (info == nullptr) {
+                done_streaming = true;
+                break;  // No data left, done streaming!
+            }
+            sendPacket(info);
             next_seq++;
         }
 
@@ -96,8 +102,12 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
                 }
             } while (window.nextIter());  // Iterate through entire window
         }
+
+        if (window.isEmpty() && done_streaming) {
+            break;
+        }
         
-        std::this_thread::sleep_for(milliseconds(10));
+        std::this_thread::sleep_for(milliseconds(SENDER_STREAMING_WAIT_MS));
 
         stats.report();
     }
@@ -117,6 +127,10 @@ PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType
     header->checksum = 0;
 
     size_t size = provider.getData(PAYLOAD_SIZE, dataBuffer);
+    if (size == 0) {
+        window.erase(seq_num);
+        return nullptr; // No data left! Done streaming.
+    }
     info->data_size = size;
 
     uint16_t chksum = compute_checksum(packet, info->packet_size());
@@ -134,7 +148,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendP
         perror("sendto failed");
     } else {
         if(debug)
-            std::cout << "Sent DATA packet seq: " << next_seq << " Len: " << sent << std::endl;
+            std::cout << "Sent DATA packet seq: " << ntohl(info->packet.header.seq_num) << " Len: " << sent << std::endl;
         stats.record_packet(sent);
     }
 
@@ -146,7 +160,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendP
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::processACKs() {
     // Process incoming ACK/NACK responses.
-    if (conn.ready({0, 100000})) {
+    if (conn.ready({0, SENDER_ACK_WAIT_MS * 1000})) {
         Packet packet;
         ssize_t recv_len = conn.receive(&packet, sizeof(packet));
         if(recv_len >= HEADER_SIZE) {
@@ -163,7 +177,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
                 if(pkt_seq >= base) {
                     for(uint32_t seq = base; seq <= pkt_seq; seq++)
                         window.erase(seq);
-                    base = pkt_seq + 1;
+                    base = pkt_seq;
                 }
             } else if(ctrl_flag == FLAG_NACK) {
                 if(debug) std::cout << "Received NACK for seq: " << pkt_seq << std::endl;
@@ -189,6 +203,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::teardown() {
+    stats.report(true);
     PacketHeader header;
     prepareFINPacket(&header, FLAG_FIN);
 
@@ -214,7 +229,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::teard
                 }
             }
         }
-        std::this_thread::sleep_for(milliseconds(100));
+        std::this_thread::sleep_for(milliseconds(RETRY_MS));
         fin_ack_retransmissions++;
     }
     PacketHeader finHeader;

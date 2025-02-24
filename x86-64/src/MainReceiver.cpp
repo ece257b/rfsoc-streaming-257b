@@ -33,6 +33,7 @@ int main(int argc, char* argv[]) {
     int receiver_port = std::atoi(args[0].c_str());
 
     auto receiver = StreamReceiver<DummyProcessor, PacketMap<Packet>, UDPStreamReceiver>(debug);
+    receiver.processor.print = debug;
     receiver.conn.setup(receiver_port);
     receiver.receiveData();
     receiver.teardown();

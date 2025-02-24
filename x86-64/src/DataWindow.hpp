@@ -7,23 +7,23 @@
 template <typename PacketType>
 class PacketMap: public DataWindow<PacketType> {
 protected:
-    std::unordered_map<uint16_t, PacketType> packetmap;
-    typename std::unordered_map<uint16_t, PacketType>::iterator iter;
+    std::unordered_map<uint32_t, PacketType> packetmap;
+    typename std::unordered_map<uint32_t, PacketType>::iterator iter;
 public:
     PacketMap() {};
     ~PacketMap() {};
     
-    PacketType* reserve(uint16_t seq_num) override {
+    PacketType* reserve(uint32_t seq_num) override {
         PacketType info;
         auto it = packetmap.insert(std::make_pair(seq_num, info)).first;
         return &(*it).second;
     };
 
-    bool contains(uint16_t seq_num) override {
+    bool contains(uint32_t seq_num) override {
         return packetmap.count(seq_num) != 0;
     };
 
-    PacketType* get(uint16_t seq_num) override {
+    PacketType* get(uint32_t seq_num) override {
         auto it = packetmap.find(seq_num);
         if (it == packetmap.end()) {
             return nullptr;
@@ -31,7 +31,7 @@ public:
         return &(*it).second;
     };
 
-    bool erase(uint16_t seq_num) override {
+    bool erase(uint32_t seq_num) override {
         return packetmap.erase(seq_num);
     };
     bool isFull() override {
@@ -59,7 +59,7 @@ public:
     }
     bool nextIter() override {
         iter++;
-        return isIterDone();
+        return !isIterDone();
     }
     bool isIterDone() override {
         return iter == packetmap.end();

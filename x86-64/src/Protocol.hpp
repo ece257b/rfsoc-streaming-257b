@@ -20,8 +20,8 @@ const int CHECKSUM_OFFSET = 7;
 const int DATA_PACKET_SIZE   = HEADER_SIZE + PAYLOAD_SIZE;  // full DATA packet size
 const int CTRL_PACKET_SIZE   = HEADER_SIZE;                 // control packets contain only header
 
-const int WINDOW_SIZE        = 6666;     // sliding window size
-const int DEFAULT_MAX_PACKETS = 10;   // default number of packets in dummy mode
+const int WINDOW_SIZE        = 1000;     // sliding window size
+const int DEFAULT_MAX_PACKETS = 1000000;   // default number of packets in dummy mode
 const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
@@ -30,6 +30,10 @@ const int PACKET_SIZE = DATA_PACKET_SIZE;
 
 constexpr char HANDSHAKE[13]  = "STREAM_START";
 constexpr size_t HANDSHAKE_SIZE = sizeof(HANDSHAKE);
+
+const int SENDER_ACK_WAIT_MS = 10;
+const int SENDER_STREAMING_WAIT_MS = 10;
+const int RETRY_MS = 100;
 
 // --- Control flag definitions ---
 enum ControlFlag {

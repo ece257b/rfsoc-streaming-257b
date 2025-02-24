@@ -29,7 +29,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
         ssize_t recv_len = conn.receive(&packet, sizeof(packet));
 
         if(recv_len < 0) {
-            std::this_thread::sleep_for(milliseconds(10));
+            std::this_thread::sleep_for(milliseconds(SENDER_STREAMING_WAIT_MS));
             continue;
         }
         if(recv_len < HEADER_SIZE) {
@@ -102,7 +102,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     uint16_t ack_chksum = compute_checksum(&ack_hdr, sizeof(ack_hdr));
     ack_hdr.checksum = htons(ack_chksum);
 
-    std::cout << "Sending ACK for " << seq_num << std::endl;
+    if (debug) std::cout << "Sending ACK for " << seq_num << std::endl;
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
 
@@ -139,7 +139,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
         char handshake_buf[64];
         ssize_t n = conn.receive(handshake_buf, sizeof(handshake_buf));
         if(n < 0) {
-            std::this_thread::sleep_for(milliseconds(100));
+            std::this_thread::sleep_for(milliseconds(RETRY_MS));
             if (debug) std::cout << "No handshake received" << std::endl;
             continue;
         }
@@ -178,7 +178,7 @@ bool StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::S
     for (int i = 0; i < 5; i++) {
         sendACK(seq_num, FLAG_FIN_ACK);
 
-        if (conn.ready({1, 0})) {
+        if (conn.ready({0, SENDER_ACK_WAIT_MS * 1000})) {
             ssize_t recv_len = conn.receive(&packet, sizeof(packet));
             if (recv_len >= HEADER_SIZE && packet.header.control_flags == FLAG_ACK && verifyChecksum(&packet, recv_len)) {
 

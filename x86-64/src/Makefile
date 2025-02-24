@@ -1,8 +1,16 @@
 # Makefile for StreamSender and StreamReceiver
 
-# Compiler and flags
-CXX      := g++
-CXXFLAGS := -std=c++11 -Wall -Wextra 
+# Detect OS
+UNAME_S := $(shell uname -s)
+
+# Set compiler based on OS
+ifeq ($(UNAME_S), Darwin)
+    CXX = clang++
+else
+    CXX = g++
+endif
+
+CXXFLAGS := -std=c++11 -Wall -Wextra -g
 
 # Automatically find all .cpp and .hpp files
 SRCS := $(wildcard *.cpp)

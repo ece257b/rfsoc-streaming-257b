@@ -19,10 +19,10 @@ public:
         sent_data_packets++;
         sent_data_bytes += bytes;
     };
-    void report() {
+    void report(bool final=false) {
         auto now = steady_clock::now();
         auto elapsed = duration_cast<seconds>(now - last_stats_time).count();
-        if(elapsed >= 1) {
+        if(final || elapsed >= 1) {
             double bps = sent_data_bytes * 8.0 / elapsed;
             if(bps >= 1e9)
                 std::cout << "[STATISTICS] Throughput: " << (bps / 1e9) << " Gbps, "

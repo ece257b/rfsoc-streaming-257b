@@ -35,6 +35,7 @@ int main(int argc, char* argv[]) {
 
     auto sender = StreamSender<DummyProvider, PacketMap<PacketInfo>, UDPStreamSender>(debug);
     sender.conn.setup(receiver_port, receiver_ip);
+    sender.provider.total_packets = std::atoi(argv[3]);
     sender.stream();
     sender.teardown();
 }
