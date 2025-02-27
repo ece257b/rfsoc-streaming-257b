@@ -67,7 +67,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
                   << ", Packet size = " << negotiated_packet_size << std::endl;
     
     assert(negotiated_buffer_size == BUFFER_SIZE);
-    assert(negotiated_packet_size == PACKET_SIZE);
+    assert(negotiated_packet_size == DATA_PACKET_SIZE);
     return 0;
 }
 

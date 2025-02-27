@@ -7,7 +7,7 @@
 
 int main(int argc, char* argv[]) {
     // --- Command-line parsing ---
-    // Usage: ./StreamReceiver <receiver_port> [filename] [--debug] [--statistics]
+    // Usage: ./StreamReceiver <receiver_port> windowsize [filename] [--debug] [--statistics]
 
     std::cout << "This is main receiver" << std::endl;
 

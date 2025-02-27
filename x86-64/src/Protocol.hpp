@@ -14,25 +14,20 @@
 
 
 const int PAYLOAD_SIZE       = 512;  // bytes of payload in DATA packets
-const int HEADER_SIZE        = sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint8_t) + sizeof(uint16_t); // 9 bytes total
-const int CHECKSUM_OFFSET = 7;
-
-const int DATA_PACKET_SIZE   = HEADER_SIZE + PAYLOAD_SIZE;  // full DATA packet size
-const int CTRL_PACKET_SIZE   = HEADER_SIZE;                 // control packets contain only header
-
 const int WINDOW_SIZE        = 1000;     // sliding window size
 const int DEFAULT_MAX_PACKETS = 1000000;   // default number of packets in dummy mode
-const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
+const int TIMEOUT_MS         = 1000000;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
 const int BUFFER_SIZE = 1024;
-const int PACKET_SIZE = DATA_PACKET_SIZE;
 
 constexpr char HANDSHAKE[13]  = "STREAM_START";
 constexpr size_t HANDSHAKE_SIZE = sizeof(HANDSHAKE);
 
-const int SENDER_ACK_WAIT_MS = 10;
-const int SENDER_STREAMING_WAIT_MS = 10;
+const int SENDER_ACK_WAIT_MS = 1;
+static_assert(SENDER_ACK_WAIT_MS < 1000, "timeval constructed with 1000*1000 us will fail.");
+
+const int SENDER_STREAMING_WAIT_MS = 1; // FIXME: Setting to zero breaks things..
 const int RETRY_MS = 100;
 
 // --- Control flag definitions ---
@@ -60,6 +55,12 @@ struct Packet {
     char data[PAYLOAD_SIZE];
 };
 #pragma pack(pop)
+
+const int HEADER_SIZE        = sizeof(PacketHeader);
+
+const int DATA_PACKET_SIZE   = HEADER_SIZE + PAYLOAD_SIZE;  // full DATA packet size
+const int CTRL_PACKET_SIZE   = HEADER_SIZE;                 // control packets contain only header
+
 
 // --- Simple Internet checksum (RFC1071 style) ---
 inline uint16_t compute_checksum(const void* data, size_t len) {
