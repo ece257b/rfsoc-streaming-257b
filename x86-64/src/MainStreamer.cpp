@@ -7,7 +7,7 @@
 
 int main(int argc, char* argv[]) {
     // --- Command-line parsing ---
-    // Usage: ./StreamSender <receiver_ip> <receiver_port> [filename] [--debug] [--statistics]
+    // Usage: ./StreamSender <receiver_ip> <receiver_port> windowsize totalpackets [--debug] [--statistics]
 
     std::cout << "This is main streamer" << std::endl;
 
@@ -32,10 +32,11 @@ int main(int argc, char* argv[]) {
     }
     std::string receiver_ip = args[0];
     int receiver_port = std::atoi(args[1].c_str());
+    int windowsize = std::atoi(args[2].c_str());
 
-    auto sender = StreamSender<DummyProvider, PacketMap<PacketInfo>, UDPStreamSender>(debug);
+    auto sender = StreamSender<DummyProvider, PacketMap<PacketInfo>, UDPStreamSender>(debug, windowsize);
     sender.conn.setup(receiver_port, receiver_ip);
-    sender.provider.total_packets = std::atoi(argv[3]);
+    sender.provider.total_packets = std::atoi(args[3].c_str());
     sender.stream();
     sender.teardown();
 }

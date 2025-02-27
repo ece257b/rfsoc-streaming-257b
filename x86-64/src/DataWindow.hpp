@@ -35,6 +35,7 @@ public:
         return packetmap.erase(seq_num);
     };
     bool isFull() override {
+        return false;   // TODO
         return packetmap.size() >= WINDOW_SIZE;
     };
     size_t size() override {

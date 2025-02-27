@@ -5,7 +5,7 @@
 #include "cmn.h"
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(bool debug) : debug(debug) {
+StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(bool debug, uint32_t window_size) : debug(debug), window_size(window_size) {
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
     static_assert(std::is_base_of<DataWindow<Packet>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
@@ -23,7 +23,10 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     int count = 0;
     base = 0;
     expected_seq = 0;
+    auto last_ack_retry = steady_clock::now();
     while (running) {
+        stats.report();
+
         Packet packet;
         PacketHeader& header = packet.header;
         ssize_t recv_len = conn.receive(&packet, sizeof(packet));
@@ -51,6 +54,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
         if (ctrl_flag == FLAG_DATA) {
             if (seq_num == expected_seq) {
                 processor.processData(recv_len - sizeof(packet.header), packet.data);
+                stats.record_packet(recv_len - sizeof(packet.header));
                 expected_seq++;
                 count++;
                 
@@ -60,7 +64,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                     Packet* windowPacket = window.reserve(seq_num);
                     memcpy((void*)windowPacket, (void*)&packet, sizeof(packet));  // May want to change algo here to avoid memcpy...
                     if(debug)
-                        std::cout << "Stored out-of-order packet seq: " << seq_num << std::endl;
+                        std::cout << "Stored out-of-order packet seq: " << seq_num << " (exp " << expected_seq << ")" << std::endl;
                 }
                 for(uint32_t missing = expected_seq; missing < seq_num; missing++) {
                     if (!window.contains(missing)) {
@@ -95,7 +99,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     
     PacketHeader ack_hdr;
     ack_hdr.seq_num = htonl(seq_num);
-    ack_hdr.window_size = htons(WINDOW_SIZE);
+    ack_hdr.window_size = htons(window_size);
     ack_hdr.control_flags = flag;
     ack_hdr.checksum = 0;
 
@@ -122,6 +126,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     do {
         hasNext = window.nextIter();   // increment iter and check if done
         processor.processData(sizeof(packet->data), packet->data);
+        stats.record_packet(sizeof(packet->data));
         count++;
         uint32_t processed_seq = packet->header.seq_num;
 
@@ -174,6 +179,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 bool StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::sendFINACK(uint32_t seq_num) {
+    stats.report(true);
     Packet packet;
     for (int i = 0; i < 5; i++) {
         sendACK(seq_num, FLAG_FIN_ACK);

@@ -19,7 +19,7 @@ class StreamReceiver
 {
 
 public:
-    StreamReceiver(bool debug);
+    StreamReceiver(bool debug, uint32_t window_size=WINDOW_SIZE);
     ~StreamReceiver();
 
     int receiveData();
@@ -29,11 +29,12 @@ public:
     DataProcessorType processor;
 private:
     DataWindowType window;
-    // ReceiverStats stats;
+    SenderStats stats;
     
     bool debug = false;
     uint32_t base = 0;      // lowest unacknowledged sequence number
     uint32_t expected_seq = 0;  // next sequence number to send
+    uint32_t window_size;
 
     int handshake();
     int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK);

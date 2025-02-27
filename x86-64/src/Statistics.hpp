@@ -7,8 +7,17 @@ using namespace std::chrono;
 
 class SenderStats {
 private:
+    bool sender = true;
+    std::string senderText = "";
 public:
-    SenderStats() {};
+    SenderStats(bool sender=true) {
+        this->sender = sender;
+        if (sender) {
+            senderText = "sent";
+        } else {
+            senderText = "received";
+        }
+    };
     ~SenderStats() {};
 
     void reset() {
@@ -26,10 +35,10 @@ public:
             double bps = sent_data_bytes * 8.0 / elapsed;
             if(bps >= 1e9)
                 std::cout << "[STATISTICS] Throughput: " << (bps / 1e9) << " Gbps, "
-                            << "Packets sent: " << sent_data_packets << std::endl;
+                            << "Packets " << senderText << ": " << sent_data_packets << std::endl;
             else
                 std::cout << "[STATISTICS] Throughput: " << (bps / 1e6) << " Mbps, "
-                            << "Packets sent: " << sent_data_packets << std::endl;
+                            << "Packets " << senderText << ": " << sent_data_packets << std::endl;
             last_stats_time = now;
             reset();
         }

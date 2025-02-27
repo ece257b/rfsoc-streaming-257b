@@ -11,7 +11,7 @@
 using namespace std::chrono;
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::StreamSender(bool debug) : debug(debug) {
+StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::StreamSender(bool debug, uint32_t window_size) : debug(debug), window_size(window_size) {
     static_assert(std::is_base_of<DataProvider, DataProviderType>::value, "type parameter of this class must derive from DataProvider");
     static_assert(std::is_base_of<DataWindow<PacketInfo>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
@@ -79,7 +79,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
     int count = 0;
     bool done_streaming = false;
     while (base < max_packets) {
-        while (next_seq < base + WINDOW_SIZE && next_seq < max_packets && !done_streaming) {
+        while (next_seq < base + window_size && next_seq < max_packets && !done_streaming) {
             PacketInfo* info = preparePacket(next_seq);
             if (info == nullptr) {
                 done_streaming = true;
@@ -122,7 +122,7 @@ PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType
     char* dataBuffer = packet->data;
 
     header->seq_num = htonl(seq_num);
-    header->window_size = htons(WINDOW_SIZE);
+    header->window_size = htons(window_size);
     header->control_flags = FLAG_DATA;
     header->checksum = 0;
 
@@ -248,7 +248,7 @@ template<typename DataProviderType, typename DataWindowType, typename NetworkCon
 void StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::prepareFINPacket(
         PacketHeader* header, ControlFlag flag) {
     header->seq_num = htonl(max_packets);
-    header->window_size = htons(WINDOW_SIZE);
+    header->window_size = htons(window_size);
     header->control_flags = flag;
     header->checksum = 0;
     

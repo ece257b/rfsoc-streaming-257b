@@ -39,6 +39,7 @@ private:
     uint32_t base = 0;      // lowest unacknowledged sequence number
     uint32_t next_seq = 0;  // next sequence number to send
     uint32_t max_packets = DEFAULT_MAX_PACKETS;
+    uint32_t window_size;
 
     int handshake();
     PacketInfo* preparePacket(uint32_t seq_num);
@@ -46,7 +47,7 @@ private:
     int processACKs();
     void prepareFINPacket(PacketHeader* header, ControlFlag flag);
 public:
-    StreamSender(bool debug);
+    StreamSender(bool debug, uint32_t window_size=WINDOW_SIZE);
     ~StreamSender();
 
     int stream();

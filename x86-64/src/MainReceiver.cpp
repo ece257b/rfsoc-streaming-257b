@@ -31,8 +31,9 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
     int receiver_port = std::atoi(args[0].c_str());
+    int windowsize = std::atoi(args[1].c_str());
 
-    auto receiver = StreamReceiver<DummyProcessor, PacketMap<Packet>, UDPStreamReceiver>(debug);
+    auto receiver = StreamReceiver<DummyProcessor, PacketMap<Packet>, UDPStreamReceiver>(debug, windowsize);
     receiver.processor.print = debug;
     receiver.conn.setup(receiver_port);
     receiver.receiveData();
