@@ -157,9 +157,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
         }
         if(n != sizeof(HANDSHAKE) || strcmp(handshake_buf, HANDSHAKE)) {
             std::cerr << "Error: Unexpected handshake message: " << handshake_buf << std::endl;
-            teardown();
-            exit(EXIT_FAILURE);
-            return 1;
+            continue;
         }
         break;
     }
