@@ -160,7 +160,8 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendP
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::processACKs() {
     // Process incoming ACK/NACK responses.
-    if (conn.ready({0, SENDER_ACK_WAIT_MS * 1000})) {
+    timeval delay = {0, SENDER_ACK_WAIT_MS * 1000}; // Wait long for the first ACK.
+    while (conn.ready(delay)) {
         Packet packet;
         ssize_t recv_len = conn.receive(&packet, sizeof(packet));
         if(recv_len >= HEADER_SIZE) {
@@ -181,24 +182,29 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
                 }
             } else if(ctrl_flag == FLAG_NACK) {
                 if(debug) std::cout << "Received NACK for seq: " << pkt_seq << std::endl;
-
                 PacketInfo* info = window.get(pkt_seq);
                 if (info) {
-                    sendPacket(info);
+                    auto now = steady_clock::now();
+                    auto elapsed = duration_cast<milliseconds>(now - info->last_sent).count();
+                    if (!info->retried || elapsed > RETRY_MS) {     
+                        // If we haven't retried this packet from a NACK already OR we did a while ago, resend it.
+                        sendPacket(info);
+                        info->retried = true;
+                    } else {
+                        if (debug) std::cout << "Not retrying yet..." << std::endl;
+                    }
                 } else {
                     std::cerr << "FATAL ERROR: Window did not have NACKd packet " << pkt_seq << std::endl;
-                    return false;
                 }
             } else {
                 if (debug) {
-                    std::cout << "Something wrong!" << std::endl;
+                    std::cout << "Unexpected Flag" << std::endl;
                 }
-                return false;
             }
         }
-        return true;
+        delay = {0, 1 * 1000};  // Don't wait long for subsequent ACKs
     }
-    return false;
+    return true;
 }
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>

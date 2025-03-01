@@ -8,6 +8,7 @@
 struct PacketInfo {
     Packet packet;
     size_t data_size;
+    bool retried = false;
     std::chrono::steady_clock::time_point last_sent;
 
     inline size_t packet_size() {
