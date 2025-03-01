@@ -1,14 +1,14 @@
 #pragma once
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include "Protocol.hpp"
 #include "DataProcessing.hpp"
 
 template <typename PacketType>
 class PacketMap: public DataWindow<PacketType> {
 protected:
-    std::unordered_map<uint32_t, PacketType> packetmap;
-    typename std::unordered_map<uint32_t, PacketType>::iterator iter;
+    std::map<uint32_t, PacketType> packetmap;
+    typename std::map<uint32_t, PacketType>::iterator iter;
 public:
     PacketMap() {};
     ~PacketMap() {};

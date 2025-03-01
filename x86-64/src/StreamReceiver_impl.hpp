@@ -5,7 +5,9 @@
 #include "cmn.h"
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(bool debug, uint32_t window_size) : debug(debug), window_size(window_size) {
+StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(
+        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), window(std::move(window)), debug(debug), window_size(window_size) {
+        
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
     static_assert(std::is_base_of<DataWindow<Packet>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
@@ -23,7 +25,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     int count = 0;
     base = 0;
     expected_seq = 0;
-    auto last_ack_retry = steady_clock::now();
+    auto last_nack = steady_clock::now();
     while (running) {
         stats.report();
 
@@ -53,6 +55,8 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 
         if (ctrl_flag == FLAG_DATA) {
             if (seq_num == expected_seq) {
+                if(debug)
+                    std::cout << "Processing exp seq " << seq_num << std::endl; 
                 processor.processData(recv_len - sizeof(packet.header), packet.data);
                 stats.record_packet(recv_len - sizeof(packet.header));
                 expected_seq++;
@@ -68,20 +72,21 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                 }
                 for(uint32_t missing = expected_seq; missing < seq_num; missing++) {
                     if (!window.contains(missing)) {
-                        sendACK(expected_seq, FLAG_NACK);     // Should we have "cumulative" NACK..? to avoid sending many packets
-                        if(debug)
-                            std::cout << "Sent NACK for missing seq: " << missing << std::endl;
+                        if(debug) std::cout << "Sending NACK for missing seq: " << missing << std::endl;
+                        sendACK(missing, FLAG_NACK);     // Should we have "cumulative" NACK..? to avoid sending many packets
                     }
                     // TODO: Timeout for resending many NACKs?
                 }
             } else {
                 // seq_num < expected_seq
                 // We got a sequence number we've already seen
+                if (debug) std::cout << "Already seen " << seq_num << " , sending ACK for " << expected_seq << std::endl;
                 sendACK(expected_seq);
             }
 
             // --- Send cumulative ACK only at end of sliding window ---
             if(expected_seq > 0 && (expected_seq % pkt_window == 0)) {  // % pkt_window may not be best
+                if (debug) std::cout << "End of window, sending ACK for " << expected_seq << std::endl;
                 sendACK(expected_seq); // expected_seq - 1 ??
             }
         } else if (ctrl_flag == FLAG_FIN) {
@@ -106,7 +111,6 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     uint16_t ack_chksum = compute_checksum(&ack_hdr, sizeof(ack_hdr));
     ack_hdr.checksum = htons(ack_chksum);
 
-    if (debug) std::cout << "Sending ACK for " << seq_num << std::endl;
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
 
@@ -122,13 +126,16 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     window.resetIter();
     Packet* packet = window.getIter();
     int count = 0;
-    bool hasNext;
+    bool hasNext = false;
     do {
         hasNext = window.nextIter();   // increment iter and check if done
         processor.processData(sizeof(packet->data), packet->data);
         stats.record_packet(sizeof(packet->data));
         count++;
-        uint32_t processed_seq = packet->header.seq_num;
+        expected_seq++;
+        uint32_t processed_seq = ntohl(packet->header.seq_num);
+        if(debug)
+            std::cout << "Processing Out of Order " << processed_seq << std::endl; 
 
         packet = window.getIter();
         window.erase(processed_seq);

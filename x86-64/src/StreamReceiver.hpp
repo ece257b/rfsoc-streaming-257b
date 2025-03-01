@@ -14,16 +14,26 @@
 //   - teardown()
 
 
+// Small abstraction to allow us to hold a reference to any (templated) StreamReceiver
+class StreamReceiverInterface {
+public:
+    virtual ~StreamReceiverInterface() {};
+    virtual int receiveData() = 0;
+    virtual int teardown() = 0;
+};
+
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-class StreamReceiver
-{
+class StreamReceiver : public StreamReceiverInterface {
 
 public:
-    StreamReceiver(bool debug, uint32_t window_size=WINDOW_SIZE);
+    StreamReceiver(
+        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn,
+        bool debug, uint32_t window_size=WINDOW_SIZE
+    );
     ~StreamReceiver();
 
-    int receiveData();
-    int teardown();
+    int receiveData() override;
+    int teardown() override;
 
     NetworkConnectionType conn;
     DataProcessorType processor;

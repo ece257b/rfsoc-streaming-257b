@@ -16,7 +16,7 @@
 const int PAYLOAD_SIZE       = 512;  // bytes of payload in DATA packets
 const int WINDOW_SIZE        = 1000;     // sliding window size
 const int DEFAULT_MAX_PACKETS = 1000000;   // default number of packets in dummy mode
-const int TIMEOUT_MS         = 1000000;   // retransmission timeout (ms)
+const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
 const int BUFFER_SIZE = 1024;
@@ -27,7 +27,7 @@ constexpr size_t HANDSHAKE_SIZE = sizeof(HANDSHAKE);
 const int SENDER_ACK_WAIT_MS = 1;
 static_assert(SENDER_ACK_WAIT_MS < 1000, "timeval constructed with 1000*1000 us will fail.");
 
-const int SENDER_STREAMING_WAIT_MS = 1; // FIXME: Setting to zero breaks things..
+const int SENDER_STREAMING_WAIT_MS = 100; // FIXME: Setting to zero breaks things..
 const int RETRY_MS = 100;
 
 // --- Control flag definitions ---

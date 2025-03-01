@@ -175,7 +175,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
             if(ctrl_flag == FLAG_ACK) {
                 if(debug) std::cout << "Received ACK for seq: " << pkt_seq << std::endl;
                 if(pkt_seq >= base) {
-                    for(uint32_t seq = base; seq <= pkt_seq; seq++)
+                    for(uint32_t seq = base; seq < pkt_seq; seq++)
                         window.erase(seq);
                     base = pkt_seq;
                 }
