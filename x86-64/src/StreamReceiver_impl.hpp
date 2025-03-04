@@ -34,7 +34,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
         ssize_t recv_len = conn.receive(&packet, sizeof(packet));
 
         if(recv_len < 0) {
-            std::this_thread::sleep_for(milliseconds(SENDER_STREAMING_WAIT_MS));
+            std::this_thread::sleep_for(microseconds(SENDER_STREAMING_WAIT_US));
             continue;
         }
         if(recv_len < HEADER_SIZE) {
@@ -189,7 +189,7 @@ bool StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::S
     for (int i = 0; i < 5; i++) {
         sendACK(seq_num, FLAG_FIN_ACK);
 
-        if (conn.ready({0, SENDER_ACK_WAIT_MS * 1000})) {
+        if (conn.ready({0, SENDER_ACK_WAIT_US * 1000})) {
             ssize_t recv_len = conn.receive(&packet, sizeof(packet));
             if (recv_len >= HEADER_SIZE && packet.header.control_flags == FLAG_ACK && verifyChecksum(&packet, recv_len)) {
 

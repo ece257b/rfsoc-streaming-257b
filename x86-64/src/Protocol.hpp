@@ -14,9 +14,9 @@
 
 
 const int PAYLOAD_SIZE       = 512;  // bytes of payload in DATA packets
-const int WINDOW_SIZE        = 1000;     // sliding window size
+const int WINDOW_SIZE        = 1000;     // default sliding window size
 const int DEFAULT_MAX_PACKETS = 1000000;   // default number of packets in dummy mode
-const int TIMEOUT_MS         = 1000;   // retransmission timeout (ms)
+const int TIMEOUT_MS         = 100;   // retransmission timeout (ms)
 const int HANDSHAKE_TIMEOUT_MS = 1000; // handshake timeout (ms)
 
 const int BUFFER_SIZE = 1024;
@@ -24,11 +24,12 @@ const int BUFFER_SIZE = 1024;
 constexpr char HANDSHAKE[13]  = "STREAM_START";
 constexpr size_t HANDSHAKE_SIZE = sizeof(HANDSHAKE);
 
-const int SENDER_ACK_WAIT_MS = 1;
-static_assert(SENDER_ACK_WAIT_MS < 1000, "timeval constructed with 1000*1000 us will fail.");
+const int SENDER_ACK_WAIT_US = 1000;
+static_assert(SENDER_ACK_WAIT_US < 1000000, "timeval constructed with 1000*1000 us will fail.");
+const int SENDER_SUBSEQUENT_ACK_WAIT_US = std::max(SENDER_ACK_WAIT_US / 100, 1);        // Don't wait 0
 
-const int SENDER_STREAMING_WAIT_MS = 100; // FIXME: Setting to zero breaks things..
-const int RETRY_MS = 100;
+const int SENDER_STREAMING_WAIT_US = 10; // FIXME: Setting to zero breaks things..
+const int RETRY_MS = 1;
 
 // --- Control flag definitions ---
 enum ControlFlag {

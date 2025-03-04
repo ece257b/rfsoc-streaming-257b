@@ -107,7 +107,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
             break;
         }
         
-        std::this_thread::sleep_for(milliseconds(SENDER_STREAMING_WAIT_MS));
+        std::this_thread::sleep_for(microseconds(SENDER_STREAMING_WAIT_US));
 
         stats.report();
     }
@@ -160,7 +160,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendP
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
 int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::processACKs() {
     // Process incoming ACK/NACK responses.
-    timeval delay = {0, SENDER_ACK_WAIT_MS * 1000}; // Wait long for the first ACK.
+    timeval delay = {0, SENDER_ACK_WAIT_US}; // Wait long for the first ACK.
     while (conn.ready(delay)) {
         Packet packet;
         ssize_t recv_len = conn.receive(&packet, sizeof(packet));
@@ -202,7 +202,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
                 }
             }
         }
-        delay = {0, 1 * 1000};  // Don't wait long for subsequent ACKs
+        delay = {0, SENDER_SUBSEQUENT_ACK_WAIT_US};  // Don't wait long for subsequent ACKs
     }
     return true;
 }
