@@ -170,18 +170,22 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
             // Verify checksum.
             if(!verifyChecksum(&packet, recv_len)) {
                 if(debug) std::cerr << "Received control packet with invalid checksum, discarding." << std::endl;
-                // continue;
+                stats.record_corrupted();
             }
 
             if(ctrl_flag == FLAG_ACK) {
                 if(debug) std::cout << "Received ACK for seq: " << pkt_seq << std::endl;
+                stats.record_ack();
                 if(pkt_seq >= base) {
                     for(uint32_t seq = base; seq < pkt_seq; seq++)
                         window.erase(seq);
                     base = pkt_seq;
+                } else {
+                    stats.record_ignored();
                 }
             } else if(ctrl_flag == FLAG_NACK) {
                 if(debug) std::cout << "Received NACK for seq: " << pkt_seq << std::endl;
+                stats.record_ack(FLAG_NACK);
                 PacketInfo* info = window.get(pkt_seq);
                 if (info) {
                     auto now = steady_clock::now();
@@ -192,6 +196,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
                         info->retried = true;
                     } else {
                         if (debug) std::cout << "Not retrying yet..." << std::endl;
+                        stats.record_ignored();
                     }
                 } else {
                     std::cerr << "FATAL ERROR: Window did not have NACKd packet " << pkt_seq << std::endl;

@@ -6,8 +6,7 @@
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(
-        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), window(std::move(window)), debug(debug), window_size(window_size) {
-        
+        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), window(std::move(window)), debug(debug), window_size(window_size), stats(false) {
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
     static_assert(std::is_base_of<DataWindow<Packet>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
@@ -25,7 +24,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     int count = 0;
     base = 0;
     expected_seq = 0;
-    auto last_nack = steady_clock::now();
+    // auto last_nack = steady_clock::now();
     while (running) {
         stats.report();
 
@@ -50,6 +49,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
         if (!verifyChecksum(&packet, recv_len)) {
             if(debug)
                 std::cerr << "Invalid checksum for packet seq " << seq_num << " Len: " << recv_len << ", discarding." << std::endl;
+            stats.record_corrupted();
             continue;
         }
 
@@ -69,11 +69,13 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                     memcpy((void*)windowPacket, (void*)&packet, sizeof(packet));  // May want to change algo here to avoid memcpy...
                     if(debug)
                         std::cout << "Stored out-of-order packet seq: " << seq_num << " (exp " << expected_seq << ")" << std::endl;
+                } else {
+                    stats.record_ignored();
                 }
                 for(uint32_t missing = expected_seq; missing < seq_num; missing++) {
                     if (!window.contains(missing)) {
                         if(debug) std::cout << "Sending NACK for missing seq: " << missing << std::endl;
-                        sendACK(missing, FLAG_NACK);     // Should we have "cumulative" NACK..? to avoid sending many packets
+                        sendACK(missing, FLAG_NACK);     // TODO: Should we have "cumulative" NACK..? to avoid sending many packets, need NACK bitmap.
                     }
                     // TODO: Timeout for resending many NACKs?
                 }
@@ -82,6 +84,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                 // We got a sequence number we've already seen
                 if (debug) std::cout << "Already seen " << seq_num << " , sending ACK for " << expected_seq << std::endl;
                 sendACK(expected_seq);
+                stats.record_ignored();
             }
 
             // --- Send cumulative ACK only at end of sliding window ---
@@ -111,6 +114,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     uint16_t ack_chksum = compute_checksum(&ack_hdr, sizeof(ack_hdr));
     ack_hdr.checksum = htons(ack_chksum);
 
+    stats.record_ack(flag);
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
 
