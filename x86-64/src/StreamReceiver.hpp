@@ -41,11 +41,13 @@ public:
 private:
     DataWindowType window;
     std::unordered_map<
-        uint32_t, 
-        std::pair<
-            ControlFlag, std::chrono::time_point<std::chrono::steady_clock>
-        >
+        uint32_t, std::chrono::time_point<std::chrono::steady_clock>
     > past_ack_times;
+
+    std::unordered_map<
+        uint32_t, std::chrono::time_point<std::chrono::steady_clock>
+    > past_nack_times;
+
     SenderStats stats;
     
     bool debug = false;

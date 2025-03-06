@@ -50,6 +50,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
             if(debug)
                 std::cerr << "Invalid checksum for packet seq " << seq_num << " Len: " << recv_len << ", discarding." << std::endl;
             stats.record_corrupted();
+            past_nack_times.erase(seq_num);  // might want to re-nack this guy!
             continue;
         }
 
@@ -60,6 +61,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                 processor.processData(recv_len - sizeof(packet.header), packet.data);
                 stats.record_packet(recv_len - sizeof(packet.header));
                 past_ack_times.erase(seq_num);  // erase past NACK times if necessary
+                past_nack_times.erase(seq_num);  // erase past NACK times if necessary
                 expected_seq++;
                 count++;
                 
@@ -108,12 +110,12 @@ template<typename DataProcessorType, typename DataWindowType, typename NetworkCo
 int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::sendACK(
         uint32_t seq_num, uint8_t flag, bool checkPastACKs) {
     
+    auto& ack_map = (flag == FLAG_ACK) ? past_ack_times : past_nack_times;
     if (checkPastACKs) {
-        const auto& it = past_ack_times.find(seq_num);
+        const auto& it = ack_map.find(seq_num);
         bool shouldSend = (
             it == past_ack_times.end() || 
-            it->second.first != flag ||
-            std::chrono::duration_cast<microseconds>(steady_clock::now() - it->second.second).count() > RETRY_ACK_US
+            std::chrono::duration_cast<microseconds>(steady_clock::now() - it->second).count() > RETRY_ACK_US
         );
         if (!shouldSend) return 0;
     }
@@ -128,7 +130,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     ack_hdr.checksum = htons(ack_chksum);
 
     stats.record_ack(flag);
-    past_ack_times[seq_num] = std::make_pair((ControlFlag)flag, std::chrono::steady_clock::now());
+    ack_map[seq_num] = std::chrono::steady_clock::now();
 
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
@@ -147,17 +149,21 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     int count = 0;
     bool hasNext = false;
     do {
+        uint32_t this_seq = ntohl(packet->header.seq_num);
+        if (this_seq != expected_seq) {
+            // There was another gap in sequence numbers that we have, so break here.
+            return count;
+        }
         hasNext = window.nextIter();   // increment iter and check if done
         processor.processData(sizeof(packet->data), packet->data);
         stats.record_packet(sizeof(packet->data));
         count++;
         expected_seq++;
-        uint32_t processed_seq = ntohl(packet->header.seq_num);
         if(debug)
-            std::cout << "Processing Out of Order " << processed_seq << std::endl; 
+            std::cout << "Processing Out of Order " << this_seq << std::endl; 
 
         packet = window.getIter();
-        window.erase(processed_seq);
+        window.erase(this_seq);
     } while(hasNext);
     return count;
 }
