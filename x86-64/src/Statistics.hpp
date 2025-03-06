@@ -89,3 +89,33 @@ private:
         return (float)((stat * 10000) / total) / 100.0;
     } 
 };
+
+/*
+
+data_proc(out_stream) {
+    static char[] buf;
+    static counter
+
+    if (counter < max) {
+        instream.read(buf[counter]);
+    } else {
+        write header
+        for (i = 0; i < max; i++) {
+            out_stream.write(buf[i]);
+        }
+    }
+}
+
+
+max = 100 * 64;
+
+100 cycles, accumulate data from syntheitc
+101 cycle: send all data on outstream
+
+101 cycle: eth subsystem reads header[0]
+102 cycle: eth subsystem reads header[1]
+103 cycle: read data[0]
+203 read data[max]
+
+
+*/

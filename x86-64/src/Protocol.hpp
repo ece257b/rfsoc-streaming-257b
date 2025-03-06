@@ -30,6 +30,7 @@ const int SENDER_SUBSEQUENT_ACK_WAIT_US = std::max(SENDER_ACK_WAIT_US / 100, 1);
 
 const int SENDER_STREAMING_WAIT_US = 10; // FIXME: Setting to zero breaks things..
 const int RETRY_MS = 1;
+const int RETRY_ACK_US = 1000;
 
 // --- Control flag definitions ---
 enum ControlFlag {

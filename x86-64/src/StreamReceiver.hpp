@@ -1,4 +1,5 @@
 #pragma once
+#include <unordered_map>
 #include "DataProcessing.hpp"
 #include "Statistics.hpp"
 
@@ -39,6 +40,12 @@ public:
     DataProcessorType processor;
 private:
     DataWindowType window;
+    std::unordered_map<
+        uint32_t, 
+        std::pair<
+            ControlFlag, std::chrono::time_point<std::chrono::steady_clock>
+        >
+    > past_ack_times;
     SenderStats stats;
     
     bool debug = false;
@@ -47,7 +54,7 @@ private:
     uint32_t window_size;
 
     int handshake();
-    int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK);
+    int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK, bool checkPastACKs=true);
     bool sendFINACK(uint32_t seq_num);
     int processOutOfOrder(); 
 };

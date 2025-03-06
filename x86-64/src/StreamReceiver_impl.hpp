@@ -59,6 +59,7 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                     std::cout << "Processing exp seq " << seq_num << std::endl; 
                 processor.processData(recv_len - sizeof(packet.header), packet.data);
                 stats.record_packet(recv_len - sizeof(packet.header));
+                past_ack_times.erase(seq_num);  // erase past NACK times if necessary
                 expected_seq++;
                 count++;
                 
@@ -74,23 +75,25 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
                 }
                 for(uint32_t missing = expected_seq; missing < seq_num; missing++) {
                     if (!window.contains(missing)) {
-                        if(debug) std::cout << "Sending NACK for missing seq: " << missing << std::endl;
-                        sendACK(missing, FLAG_NACK);     // TODO: Should we have "cumulative" NACK..? to avoid sending many packets, need NACK bitmap.
+                        if (sendACK(missing, FLAG_NACK)) {
+                            if(debug) std::cout << "Sent NACK for missing seq: " << missing << std::endl;
+                        }
                     }
-                    // TODO: Timeout for resending many NACKs?
                 }
             } else {
                 // seq_num < expected_seq
                 // We got a sequence number we've already seen
-                if (debug) std::cout << "Already seen " << seq_num << " , sending ACK for " << expected_seq << std::endl;
-                sendACK(expected_seq);
+                if (sendACK(expected_seq)) {
+                    if (debug) std::cout << "Already seen " << seq_num << " , sent ACK for " << expected_seq << std::endl;
+                }
                 stats.record_ignored();
             }
 
             // --- Send cumulative ACK only at end of sliding window ---
             if(expected_seq > 0 && (expected_seq % pkt_window == 0)) {  // % pkt_window may not be best
-                if (debug) std::cout << "End of window, sending ACK for " << expected_seq << std::endl;
-                sendACK(expected_seq); // expected_seq - 1 ??
+                if (sendACK(expected_seq)) {
+                    if (debug) std::cout << "End of window, sending ACK for " << expected_seq << std::endl;
+                }
             }
         } else if (ctrl_flag == FLAG_FIN) {
             sendFINACK(seq_num);
@@ -103,7 +106,17 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::sendACK(
-        uint32_t seq_num, uint8_t flag) {
+        uint32_t seq_num, uint8_t flag, bool checkPastACKs) {
+    
+    if (checkPastACKs) {
+        const auto& it = past_ack_times.find(seq_num);
+        bool shouldSend = (
+            it == past_ack_times.end() || 
+            it->second.first != flag ||
+            std::chrono::duration_cast<microseconds>(steady_clock::now() - it->second.second).count() > RETRY_ACK_US
+        );
+        if (!shouldSend) return 0;
+    }
     
     PacketHeader ack_hdr;
     ack_hdr.seq_num = htonl(seq_num);
@@ -115,6 +128,8 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     ack_hdr.checksum = htons(ack_chksum);
 
     stats.record_ack(flag);
+    past_ack_times[seq_num] = std::make_pair((ControlFlag)flag, std::chrono::steady_clock::now());
+
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
 
