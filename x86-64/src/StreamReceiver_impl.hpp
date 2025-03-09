@@ -4,19 +4,18 @@
 #include "NetworkConnection.hpp"
 #include "cmn.h"
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(
-        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), window(std::move(window)), stats(false), debug(debug), window_size(window_size) {
+template<typename DataProcessorType, typename NetworkConnectionType>
+StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver(
+        DataProcessorType&& processor, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), stats(false), debug(debug), window_size(window_size) {
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
-    static_assert(std::is_base_of<DataWindow<Packet>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
 }
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::~StreamReceiver() {}
+template<typename DataProcessorType, typename NetworkConnectionType>
+StreamReceiver<DataProcessorType, NetworkConnectionType>::~StreamReceiver() {}
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::receiveData() {
+template<typename DataProcessorType, typename NetworkConnectionType>
+int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::receiveData() {
     conn.open();
     handshake();
 
@@ -106,8 +105,8 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 }
 
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::sendACK(
+template<typename DataProcessorType, typename NetworkConnectionType>
+int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::sendACK(
         uint32_t seq_num, uint8_t flag, bool checkPastACKs) {
     
     auto& ack_map = (flag == FLAG_ACK) ? past_ack_times : past_nack_times;
@@ -135,8 +134,8 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::processOutOfOrder() {
+template<typename DataProcessorType, typename NetworkConnectionType>
+int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::processOutOfOrder() {
     // while(out_of_order.count(expected_seq)) {
     //     if(debug)
     //         std::cout << "Processing buffered packet seq: " << expected_seq << std::endl;
@@ -169,8 +168,8 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
 }
 
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::handshake() {
+template<typename DataProcessorType, typename NetworkConnectionType>
+int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::handshake() {
     // === Negotiation Handshake ===
     while (true) {
         char handshake_buf[64];
@@ -207,8 +206,8 @@ int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::St
     return 0;
 }
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-bool StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::sendFINACK(uint32_t seq_num) {
+template<typename DataProcessorType, typename NetworkConnectionType>
+bool StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::sendFINACK(uint32_t seq_num) {
     stats.report(true);
     Packet packet;
     for (int i = 0; i < 5; i++) {
@@ -227,8 +226,8 @@ bool StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::S
     return false;
 }
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
-int StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver::teardown() {
+template<typename DataProcessorType, typename NetworkConnectionType>
+int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::teardown() {
     window.clear();
     conn.close();
     return 0;

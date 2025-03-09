@@ -1,6 +1,6 @@
 #pragma once
 #include <unordered_map>
-#include "DataProcessing.hpp"
+#include "DataWindow.hpp"
 #include "Statistics.hpp"
 
 // - class StreamReceiver
@@ -23,12 +23,12 @@ public:
     virtual int teardown() = 0;
 };
 
-template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
+template<typename DataProcessorType, typename NetworkConnectionType>
 class StreamReceiver : public StreamReceiverInterface {
 
 public:
     StreamReceiver(
-        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn,
+        DataProcessorType&& processor, NetworkConnectionType&& conn,
         bool debug, uint32_t window_size=WINDOW_SIZE
     );
     ~StreamReceiver();
@@ -39,7 +39,7 @@ public:
     NetworkConnectionType conn;
     DataProcessorType processor;
 private:
-    DataWindowType window;
+    PacketMap<Packet> window;
     std::unordered_map<
         uint32_t, std::chrono::time_point<std::chrono::steady_clock>
     > past_ack_times;

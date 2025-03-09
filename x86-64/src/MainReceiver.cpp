@@ -11,13 +11,13 @@ std::unique_ptr<StreamReceiverInterface> receiverFactory(int receiver_port, std:
     std::unique_ptr<StreamReceiverInterface> ptr;
 
     if (perror == -1) {
-        auto receiver = new StreamReceiver<FileWriter, PacketMap<Packet>, UDPStreamReceiver>(
-            FileWriter(ostream), PacketMap<Packet>(), UDPStreamReceiver(receiver_port), debug, windowsize
+        auto receiver = new StreamReceiver<FileWriter, UDPStreamReceiver>(
+            FileWriter(ostream), UDPStreamReceiver(receiver_port), debug, windowsize
         );
         ptr.reset(receiver);
     } else {
-        auto receiver = new StreamReceiver<FileWriter, PacketMap<Packet>, FaultyUDPStreamReceiver>(
-            FileWriter(ostream), PacketMap<Packet>(), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize
+        auto receiver = new StreamReceiver<FileWriter, FaultyUDPStreamReceiver>(
+            FileWriter(ostream), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize
         );
         ptr.reset(receiver);
     }
