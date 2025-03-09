@@ -50,8 +50,7 @@ public:
         packetmap.clear();
     }
 
-    // Use unordered_map iteration for efficient iteration
-    // May want to switch to ordered map if we need to guarantee order?
+    // Use map iterator for efficient iteration
     void resetIter() override {
         iter = packetmap.begin();
     }

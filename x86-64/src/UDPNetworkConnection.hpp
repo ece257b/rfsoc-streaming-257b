@@ -40,7 +40,9 @@ protected:
 
 class UDPStreamSender : public UDPNetworkConnection {
 public:
-    UDPStreamSender() {};
+    UDPStreamSender(int receiver_port, std::string& receiver_ip) {
+        setup(receiver_port, receiver_ip);
+    };
 
     void setup(int receiver_port, std::string& receiver_ip) {
         this->receiver_port = receiver_port;

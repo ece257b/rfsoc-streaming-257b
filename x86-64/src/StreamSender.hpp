@@ -28,9 +28,15 @@
 //   - teardown()
 //     - FIN/FINACK logic
 
+class StreamSenderInterface {
+public:
+    virtual ~StreamSenderInterface() {};
+    virtual int stream() = 0;
+    virtual int teardown() = 0;
+};
+
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-class StreamSender
-{   
+class StreamSender : public StreamSenderInterface {   
 private:
     DataWindowType window;
     SenderStats stats;
@@ -47,11 +53,14 @@ private:
     int processACKs();
     void prepareFINPacket(PacketHeader* header, ControlFlag flag);
 public:
-    StreamSender(bool debug, uint32_t window_size=WINDOW_SIZE);
+    StreamSender(
+        DataProviderType&& provider, DataWindowType&& window, NetworkConnectionType&& conn,
+        bool debug, uint32_t window_size=WINDOW_SIZE
+    );
     ~StreamSender();
 
-    int stream();
-    int teardown();
+    int stream() override;
+    int teardown() override;
 
     NetworkConnectionType conn;
     DataProviderType provider;

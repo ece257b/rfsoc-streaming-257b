@@ -5,8 +5,9 @@
 class DummyProvider : public DataProvider {
 // Interface to read data sequentially. Can use for dummy, file, or stream
 public:
+    DummyProvider(uint32_t num_packets=1000) : total_packets(num_packets) {}
     uint32_t count = 0;
-    uint32_t total_packets = -1;
+    uint32_t total_packets;
     int getData(size_t size, char* buffer) override {
         if (count >= total_packets) {
             return 0;

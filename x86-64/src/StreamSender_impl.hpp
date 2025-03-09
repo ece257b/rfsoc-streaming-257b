@@ -11,7 +11,9 @@
 using namespace std::chrono;
 
 template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::StreamSender(bool debug, uint32_t window_size) : debug(debug), window_size(window_size) {
+StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::StreamSender(
+        DataProviderType&& provider, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) 
+            : window(std::move(window)), debug(debug), window_size(window_size), conn(std::move(conn)), provider(std::move(provider)) {
     static_assert(std::is_base_of<DataProvider, DataProviderType>::value, "type parameter of this class must derive from DataProvider");
     static_assert(std::is_base_of<DataWindow<PacketInfo>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");

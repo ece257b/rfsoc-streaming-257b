@@ -6,7 +6,7 @@
 
 template<typename DataProcessorType, typename DataWindowType, typename NetworkConnectionType>
 StreamReceiver<DataProcessorType, DataWindowType, NetworkConnectionType>::StreamReceiver(
-        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), window(std::move(window)), debug(debug), window_size(window_size), stats(false) {
+        DataProcessorType&& processor, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), window(std::move(window)), stats(false), debug(debug), window_size(window_size) {
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
     static_assert(std::is_base_of<DataWindow<Packet>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");

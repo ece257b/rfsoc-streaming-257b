@@ -2,20 +2,22 @@
 #include "StreamReceiver.hpp"
 #include "DataWindow.hpp"
 #include "DummyData.hpp"
+#include "FileData.hpp"
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
-std::unique_ptr<StreamReceiverInterface> receiverFactory(int receiver_port, float perror, bool debug, bool stats, int windowsize) {
+std::unique_ptr<StreamReceiverInterface> receiverFactory(int receiver_port, std::ostream& ostream, float perror, bool debug, bool stats, int windowsize) {
+    UNUSED(stats);
     std::unique_ptr<StreamReceiverInterface> ptr;
 
     if (perror == -1) {
-        auto receiver = new StreamReceiver<DummyProcessor, PacketMap<Packet>, UDPStreamReceiver>(
-            DummyProcessor(false), PacketMap<Packet>(), UDPStreamReceiver(receiver_port), debug, windowsize
+        auto receiver = new StreamReceiver<FileWriter, PacketMap<Packet>, UDPStreamReceiver>(
+            FileWriter(ostream), PacketMap<Packet>(), UDPStreamReceiver(receiver_port), debug, windowsize
         );
         ptr.reset(receiver);
     } else {
-        auto receiver = new StreamReceiver<DummyProcessor, PacketMap<Packet>, FaultyUDPStreamReceiver>(
-            DummyProcessor(false), PacketMap<Packet>(), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize
+        auto receiver = new StreamReceiver<FileWriter, PacketMap<Packet>, FaultyUDPStreamReceiver>(
+            FileWriter(ostream), PacketMap<Packet>(), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize
         );
         ptr.reset(receiver);
     }
@@ -33,6 +35,7 @@ int main(int argc, char* argv[]) {
     bool stats = false;
     float perror = -1;
     int windowsize = WINDOW_SIZE;
+    std::string filename = "";
 
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
@@ -48,6 +51,9 @@ int main(int argc, char* argv[]) {
         } else if (arg == "-window") {
             windowsize = std::atoi(argv[i+1]);
             i++;
+        } else if (arg == "-file") {
+            filename = argv[i+1];
+            i++;
         } else {
             args.push_back(arg);
         }
@@ -59,8 +65,17 @@ int main(int argc, char* argv[]) {
 
     int receiver_port = std::atoi(args[0].c_str());
 
+    std::ofstream fstream;
+    std::ostream* ostream;
 
-    auto receiver = receiverFactory(receiver_port, perror, debug, stats, windowsize);
+    if (filename != "") {
+        fstream.open(filename, std::ios::binary | std::ios::out);
+        ostream = &fstream;
+    } else {
+        ostream = &std::cout;
+    }
+
+    auto receiver = receiverFactory(receiver_port, *ostream, perror, debug, stats, windowsize);
     receiver->receiveData();
     receiver->teardown();
 }
