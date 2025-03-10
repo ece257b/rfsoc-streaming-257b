@@ -5,7 +5,7 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
-std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool stats, int windowsize) {
+std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool stats, int windowsize, bool superdumb) {
     UNUSED(stats);
     std::unique_ptr<StreamSenderInterface> ptr;
 
@@ -18,7 +18,7 @@ std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::str
     } else {
         std::cout << "streaming dummy data" << std::endl;
         auto sender = new StreamSender<DummyProvider, UDPStreamSender>(
-            DummyProvider(num_dummy_packets), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
+            DummyProvider(num_dummy_packets, superdumb), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
         );
         ptr.reset(sender);
     }
@@ -38,14 +38,17 @@ int main(int argc, char* argv[]) {
     int windowsize = WINDOW_SIZE;
     std::string filename = "";
     int num_dummy_packets = 1000;
+    bool superdumb = false;
 
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if(arg == "--debug") {
             debug = true;
-        } else if(arg == "--statistics") {
+        } else if (arg == "--statistics") {
             stats = true;
+        } else if (arg == "--superdumb") {
+            superdumb = true;
         } else if (arg == "-window") {
             windowsize = std::atoi(argv[i+1]);
             i++;
@@ -60,7 +63,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if(args.size() < 1) {
-        std::cerr << "Usage: " << argv[0] << " <receiver_ip> <receiver_port> [-file filename] [-num num_dummy_packets] [-window windowsize] [--debug] [--statistics]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <receiver_ip> <receiver_port> [-file filename] [-num num_dummy_packets] [-window windowsize] [--debug] [--statistics] [--superdumb]" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -74,7 +77,7 @@ int main(int argc, char* argv[]) {
         num_dummy_packets = -1;
     }
 
-    auto receiver = senderFactory(receiver_port, receiver_ip, fstream, num_dummy_packets, debug, stats, windowsize);
+    auto receiver = senderFactory(receiver_port, receiver_ip, fstream, num_dummy_packets, debug, stats, windowsize, superdumb);
     receiver->stream();
     receiver->teardown();
 }

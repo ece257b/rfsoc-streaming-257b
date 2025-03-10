@@ -13,7 +13,7 @@
 #include <cstdio>
 
 
-const int PAYLOAD_SIZE       = 512;  // bytes of payload in DATA packets
+const int PAYLOAD_SIZE       = 2500;  // bytes of payload in DATA packets
 const int WINDOW_SIZE        = 1000;     // default sliding window size
 const int DEFAULT_MAX_PACKETS = 1000000;   // default number of packets in dummy mode
 const int TIMEOUT_MS         = 100;   // retransmission timeout (ms)

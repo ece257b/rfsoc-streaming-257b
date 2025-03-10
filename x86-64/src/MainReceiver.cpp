@@ -67,12 +67,15 @@ int main(int argc, char* argv[]) {
 
     std::ofstream fstream;
     std::ostream* ostream;
+    NullStream nullstr;
 
     if (filename != "") {
         fstream.open(filename, std::ios::binary | std::ios::out);
         ostream = &fstream;
-    } else {
+    } else if (debug) {
         ostream = &std::cout;
+    } else {
+        ostream = &nullstr;
     }
 
     auto receiver = receiverFactory(receiver_port, *ostream, perror, debug, stats, windowsize);
