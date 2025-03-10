@@ -10,22 +10,21 @@
 
 using namespace std::chrono;
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::StreamSender(
-        DataProviderType&& provider, DataWindowType&& window, NetworkConnectionType&& conn, bool debug, uint32_t window_size) 
-            : window(std::move(window)), debug(debug), window_size(window_size), conn(std::move(conn)), provider(std::move(provider)) {
+template<typename DataProviderType, typename NetworkConnectionType>
+StreamSender<DataProviderType, NetworkConnectionType>::StreamSender(
+        DataProviderType&& provider, NetworkConnectionType&& conn, bool debug, uint32_t window_size) 
+            : window(window_size), debug(debug), window_size(window_size), conn(std::move(conn)), provider(std::move(provider)) {
     static_assert(std::is_base_of<DataProvider, DataProviderType>::value, "type parameter of this class must derive from DataProvider");
-    static_assert(std::is_base_of<DataWindow<PacketInfo>, DataWindowType>::value, "type parameter of this class must derive from DataWindow<PacketInfo>");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::~StreamSender() {
+template<typename DataProviderType, typename NetworkConnectionType>
+StreamSender<DataProviderType, NetworkConnectionType>::~StreamSender() {
     
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::handshake() {
+template<typename DataProviderType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, NetworkConnectionType>::handshake() {
     auto last_handshake_time = steady_clock::now();
     ssize_t s = conn.send((void*) HANDSHAKE, HANDSHAKE_SIZE);
 
@@ -73,18 +72,20 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::hands
     return 0;
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::stream() {
+template<typename DataProviderType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, NetworkConnectionType>::stream() {
     conn.open();
     handshake();
 
     int count = 0;
+    uint32_t final_seq = 0;
     bool done_streaming = false;
     while (base < max_packets) {
         while (next_seq < base + window_size && next_seq < max_packets && !done_streaming) {
             PacketInfo* info = preparePacket(next_seq);
             if (info == nullptr) {
                 done_streaming = true;
+                final_seq = next_seq;
                 break;  // No data left, done streaming!
             }
             sendPacket(info);
@@ -93,19 +94,23 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
 
         processACKs();
 
+        // Send all timed out packets
         auto now = steady_clock::now();
-        if (!window.isEmpty()) {
-            window.resetIter();
-            do {
-                PacketInfo* info = window.getIter();
+        for (uint32_t i = base; i < base + window_size; i++) {
+            PacketInfo* info = window.get(i);
+            if (info) {
                 auto elapsed = std::chrono::duration_cast<milliseconds>(now - info->last_sent);
                 if (elapsed.count() >= TIMEOUT_MS) {
                     sendPacket(info);
                 }
-            } while (window.nextIter());  // Iterate through entire window
+            } else {
+                if (debug) std::cout << "WARNING Didn't find " << i << " in window, base=" << base << std::endl;
+                break;
+            }
         }
 
-        if (window.isEmpty() && done_streaming) {
+        if (base == final_seq && done_streaming) {
+            // We have received an ACK for final seq, and we don't have any data left to stream.
             break;
         }
         
@@ -116,8 +121,8 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::strea
     return count;
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::preparePacket(uint32_t seq_num) {
+template<typename DataProviderType, typename NetworkConnectionType>
+PacketInfo* StreamSender<DataProviderType, NetworkConnectionType>::preparePacket(uint32_t seq_num) {
     PacketInfo* info = window.reserve(seq_num);
     Packet* packet = &info->packet;
     PacketHeader* header = &packet->header;
@@ -142,8 +147,8 @@ PacketInfo* StreamSender<DataProviderType, DataWindowType, NetworkConnectionType
     return info;
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendPacket(PacketInfo* info) {
+template<typename DataProviderType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, NetworkConnectionType>::sendPacket(PacketInfo* info) {
     ssize_t sent = conn.send(&info->packet, info->packet_size());
 
     if(sent < 0) {
@@ -159,8 +164,8 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::sendP
 }
 
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::processACKs() {
+template<typename DataProviderType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, NetworkConnectionType>::processACKs() {
     // Process incoming ACK/NACK responses.
     timeval delay = {0, SENDER_ACK_WAIT_US}; // Wait long for the first ACK.
     while (conn.ready(delay)) {
@@ -179,8 +184,7 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
                 if(debug) std::cout << "Received ACK for seq: " << pkt_seq << std::endl;
                 stats.record_ack();
                 if(pkt_seq >= base) {
-                    for(uint32_t seq = base; seq < pkt_seq; seq++)
-                        window.erase(seq);
+                    window.advanceTo(pkt_seq);
                     base = pkt_seq;
                 } else {
                     stats.record_ignored();
@@ -214,8 +218,8 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::proce
     return true;
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::teardown() {
+template<typename DataProviderType, typename NetworkConnectionType>
+int StreamSender<DataProviderType, NetworkConnectionType>::teardown() {
     stats.report(true);
     PacketHeader header;
     prepareFINPacket(&header, FLAG_FIN);
@@ -257,8 +261,8 @@ int StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::teard
     return 0;
 }
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
-void StreamSender<DataProviderType, DataWindowType, NetworkConnectionType>::prepareFINPacket(
+template<typename DataProviderType, typename NetworkConnectionType>
+void StreamSender<DataProviderType, NetworkConnectionType>::prepareFINPacket(
         PacketHeader* header, ControlFlag flag) {
     header->seq_num = htonl(max_packets);
     header->window_size = htons(window_size);

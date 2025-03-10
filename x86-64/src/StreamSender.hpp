@@ -4,6 +4,7 @@
 #include <string>
 #include "Statistics.hpp"
 #include "DataProcessing.hpp"
+#include "SlidingWindow.hpp"
 #include "NetworkUtils.hpp"
 #include "Protocol.hpp"
 #include "NetworkConnection.hpp"
@@ -28,6 +29,18 @@
 //   - teardown()
 //     - FIN/FINACK logic
 
+struct PacketInfo {
+    Packet packet;
+    size_t data_size;
+    bool retried = false;
+    std::chrono::steady_clock::time_point last_sent;
+
+    inline size_t packet_size() {
+        return data_size + sizeof(packet.header);
+    }
+};
+
+
 class StreamSenderInterface {
 public:
     virtual ~StreamSenderInterface() {};
@@ -35,10 +48,10 @@ public:
     virtual int teardown() = 0;
 };
 
-template<typename DataProviderType, typename DataWindowType, typename NetworkConnectionType>
+template<typename DataProviderType, typename NetworkConnectionType>
 class StreamSender : public StreamSenderInterface {   
 private:
-    DataWindowType window;
+    SlidingWindow<PacketInfo> window;
     SenderStats stats;
     
     bool debug = false;
@@ -54,7 +67,7 @@ private:
     void prepareFINPacket(PacketHeader* header, ControlFlag flag);
 public:
     StreamSender(
-        DataProviderType&& provider, DataWindowType&& window, NetworkConnectionType&& conn,
+        DataProviderType&& provider, NetworkConnectionType&& conn,
         bool debug, uint32_t window_size=WINDOW_SIZE
     );
     ~StreamSender();

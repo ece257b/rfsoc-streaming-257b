@@ -5,17 +5,6 @@
 #include "Protocol.hpp"
 
 // --- Structure to track unacknowledged packets --- 
-struct PacketInfo {
-    Packet packet;
-    size_t data_size;
-    bool retried = false;
-    std::chrono::steady_clock::time_point last_sent;
-
-    inline size_t packet_size() {
-        return data_size + sizeof(packet.header);
-    }
-};
-
 class DataProvider {
 // Interface to read data sequentially. Can use for dummy, file, or stream
 public:

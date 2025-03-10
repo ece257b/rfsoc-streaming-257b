@@ -1,6 +1,5 @@
 #include <memory>
 #include "StreamSender.hpp"
-#include "DataWindow.hpp"
 #include "DummyData.hpp"
 #include "FileData.hpp"
 #include "UDPNetworkConnection.hpp"
@@ -12,14 +11,14 @@ std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::str
 
     if (num_dummy_packets == -1) {
         std::cout << "streaming from file" << std::endl;
-        auto sender = new StreamSender<FileReader, PacketMap<PacketInfo>, UDPStreamSender>(
-            FileReader(istream), PacketMap<PacketInfo>(), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
+        auto sender = new StreamSender<FileReader, UDPStreamSender>(
+            FileReader(istream), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
         );
         ptr.reset(sender);
     } else {
         std::cout << "streaming dummy data" << std::endl;
-        auto sender = new StreamSender<DummyProvider, PacketMap<PacketInfo>, UDPStreamSender>(
-            DummyProvider(num_dummy_packets), PacketMap<PacketInfo>(), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
+        auto sender = new StreamSender<DummyProvider, UDPStreamSender>(
+            DummyProvider(num_dummy_packets), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
         );
         ptr.reset(sender);
     }
