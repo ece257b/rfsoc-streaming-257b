@@ -6,18 +6,17 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
-std::unique_ptr<StreamReceiverInterface> receiverFactory(int receiver_port, std::ostream& ostream, float perror, bool debug, bool stats, int windowsize) {
-    UNUSED(stats);
+std::unique_ptr<StreamReceiverInterface> receiverFactory(int receiver_port, std::ostream& ostream, float perror, bool debug, bool csv, int windowsize) {
     std::unique_ptr<StreamReceiverInterface> ptr;
 
-    if (perror == -1) {
+    if (perror == 0) {
         auto receiver = new StreamReceiver<FileWriter, UDPStreamReceiver>(
-            FileWriter(ostream), UDPStreamReceiver(receiver_port), debug, windowsize
+            FileWriter(ostream), UDPStreamReceiver(receiver_port), debug, windowsize, csv
         );
         ptr.reset(receiver);
     } else {
         auto receiver = new StreamReceiver<FileWriter, FaultyUDPStreamReceiver>(
-            FileWriter(ostream), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize
+            FileWriter(ostream), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize, csv
         );
         ptr.reset(receiver);
     }
@@ -32,8 +31,8 @@ int main(int argc, char* argv[]) {
     std::cout << "This is main receiver" << std::endl;
 
     bool debug = false;
-    bool stats = false;
-    float perror = -1;
+    bool csv = false;
+    float perror = 0;
     int windowsize = WINDOW_SIZE;
     std::string filename = "";
 
@@ -42,8 +41,8 @@ int main(int argc, char* argv[]) {
         std::string arg = argv[i];
         if(arg == "--debug") {
             debug = true;
-        } else if(arg == "--statistics") {
-            stats = true;
+        } else if(arg == "--csv") {
+            csv = true;
         } else if (arg == "-perror") {
             perror = std::atof(argv[i+1]);
             std::cout << "set error " << perror << std::endl;
@@ -59,7 +58,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if(args.size() < 1) {
-        std::cerr << "Usage: " << argv[0] << " <receiver_port> [-perror err] [-window windowsize] [--debug] [--statistics]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <receiver_port> [-perror err] [-window windowsize] [--debug] [--csv]" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -78,7 +77,7 @@ int main(int argc, char* argv[]) {
         ostream = &nullstr;
     }
 
-    auto receiver = receiverFactory(receiver_port, *ostream, perror, debug, stats, windowsize);
+    auto receiver = receiverFactory(receiver_port, *ostream, perror, debug, csv, windowsize);
     receiver->receiveData();
     receiver->teardown();
 }

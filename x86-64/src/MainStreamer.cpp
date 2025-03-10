@@ -5,20 +5,19 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
-std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool stats, int windowsize, bool superdumb) {
-    UNUSED(stats);
+std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool csv, int windowsize, bool superdumb) {
     std::unique_ptr<StreamSenderInterface> ptr;
 
     if (num_dummy_packets == -1) {
         std::cout << "streaming from file" << std::endl;
         auto sender = new StreamSender<FileReader, UDPStreamSender>(
-            FileReader(istream), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
+            FileReader(istream), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize, csv
         );
         ptr.reset(sender);
     } else {
         std::cout << "streaming dummy data" << std::endl;
         auto sender = new StreamSender<DummyProvider, UDPStreamSender>(
-            DummyProvider(num_dummy_packets, superdumb), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
+            DummyProvider(num_dummy_packets, superdumb), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize, csv
         );
         ptr.reset(sender);
     }
@@ -34,7 +33,7 @@ int main(int argc, char* argv[]) {
     std::cout << "This is main receiver" << std::endl;
 
     bool debug = false;
-    bool stats = false;
+    bool csv = false;
     int windowsize = WINDOW_SIZE;
     std::string filename = "";
     int num_dummy_packets = 1000;
@@ -45,8 +44,8 @@ int main(int argc, char* argv[]) {
         std::string arg = argv[i];
         if(arg == "--debug") {
             debug = true;
-        } else if (arg == "--statistics") {
-            stats = true;
+        } else if (arg == "--csv") {
+            csv = true;
         } else if (arg == "--superdumb") {
             superdumb = true;
         } else if (arg == "-window") {
@@ -63,7 +62,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if(args.size() < 1) {
-        std::cerr << "Usage: " << argv[0] << " <receiver_ip> <receiver_port> [-file filename] [-num num_dummy_packets] [-window windowsize] [--debug] [--statistics] [--superdumb]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <receiver_ip> <receiver_port> [-file filename] [-num num_dummy_packets] [-window windowsize] [--debug] [--csv] [--superdumb]" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -77,7 +76,7 @@ int main(int argc, char* argv[]) {
         num_dummy_packets = -1;
     }
 
-    auto receiver = senderFactory(receiver_port, receiver_ip, fstream, num_dummy_packets, debug, stats, windowsize, superdumb);
+    auto receiver = senderFactory(receiver_port, receiver_ip, fstream, num_dummy_packets, debug, csv, windowsize, superdumb);
     receiver->stream();
     receiver->teardown();
 }

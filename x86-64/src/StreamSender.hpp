@@ -68,7 +68,7 @@ private:
 public:
     StreamSender(
         DataProviderType&& provider, NetworkConnectionType&& conn,
-        bool debug, uint32_t window_size=WINDOW_SIZE
+        bool debug, uint32_t window_size=WINDOW_SIZE, bool csv=false
     );
     ~StreamSender();
 

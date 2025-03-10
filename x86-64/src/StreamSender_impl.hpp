@@ -12,8 +12,8 @@ using namespace std::chrono;
 
 template<typename DataProviderType, typename NetworkConnectionType>
 StreamSender<DataProviderType, NetworkConnectionType>::StreamSender(
-        DataProviderType&& provider, NetworkConnectionType&& conn, bool debug, uint32_t window_size) 
-            : window(window_size), debug(debug), window_size(window_size), conn(std::move(conn)), provider(std::move(provider)) {
+        DataProviderType&& provider, NetworkConnectionType&& conn, bool debug, uint32_t window_size, bool csv) 
+            : window(window_size), stats(true, csv, true), debug(debug), window_size(window_size), conn(std::move(conn)), provider(std::move(provider)) {
     static_assert(std::is_base_of<DataProvider, DataProviderType>::value, "type parameter of this class must derive from DataProvider");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
 }

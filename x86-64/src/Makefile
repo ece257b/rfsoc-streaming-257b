@@ -11,7 +11,8 @@ else
 endif
 
 CXXFLAGS := -std=c++11 -Wall -Wextra -g -I /opt/homebrew/include
-LDFLAGS := -L /opt/homebrew/lib -L/usr/local/lib -lzmq -lboost_system -lboost_thread -lpthread -lzmqpp
+# LDFLAGS := -L /opt/homebrew/lib -L/usr/local/lib -lzmq -lboost_system -lboost_thread -lpthread -lzmqpp
+LDFLAGS := ""
 
 # Automatically find all .cpp and .hpp files
 SRCS := $(wildcard *.cpp)

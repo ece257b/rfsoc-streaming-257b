@@ -29,7 +29,7 @@ class StreamReceiver : public StreamReceiverInterface {
 public:
     StreamReceiver(
         DataProcessorType&& processor, NetworkConnectionType&& conn,
-        bool debug, uint32_t window_size=WINDOW_SIZE
+        bool debug, uint32_t window_size=WINDOW_SIZE, bool csv=false
     );
     ~StreamReceiver();
 

@@ -32,6 +32,12 @@ const int SENDER_STREAMING_WAIT_US = 10; // FIXME: Setting to zero breaks things
 const int RETRY_MS = 1;
 const int RETRY_ACK_US = 100000;
 
+enum ExecutionMode {
+    BENCHMARK = 0,
+    STANDARD = 1,
+    DEBUG = 2
+};
+
 // --- Control flag definitions ---
 enum ControlFlag {
     FLAG_DATA     = 0,

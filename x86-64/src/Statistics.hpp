@@ -9,13 +9,11 @@ using namespace std::chrono;
 
 class SenderStats {
 public:
-    SenderStats(bool sender=true, bool report_percent=true, std::ostream& stream=std::cout) 
-            : report_percent(report_percent), stream(stream) {
-        if (sender) {
-            senderText = "sent";
-        } else {
-            senderText = "received";
-        }
+    SenderStats(bool sender=true, bool csv_mode=false, bool report_percent=true, std::ostream& stream=std::cout) 
+            : stream(stream) {
+        this->csv_mode = csv_mode;
+        this->report_percent = csv_mode ? false : report_percent;
+        senderText = sender ? "sent" : "received";
     };
     ~SenderStats() = default;
 
@@ -46,25 +44,34 @@ public:
     }
     void report(bool final=false) {
         auto now = steady_clock::now();
-        auto elapsed = duration_cast<seconds>(now - last_stats_time).count();
-        if(final || elapsed >= 1) {
-            double bps = data_bytes * 8.0 / elapsed;
+        auto elapsed = duration_cast<milliseconds>(now - last_stats_time).count();
+        if(final || elapsed >= 1000) {
+            double mbps = data_bytes * 8.0 / elapsed * 1000 / 1e6;
+            if (mbps == 0 || std::isinf(mbps)) {
+                last_stats_time = now;
+                reset();
+                return;
+            }
             
-            if (!report_percent) {
-                stream << "[STATISTICS] Throughput: " << (bps / 1e6) << " Mbps, "
-                            << "Packets " << senderText << ": " << data_packets 
-                            << " ACKS: " << acks 
-                            << " NACKS: " << nacks 
-                            << " Corrupted: " << corrupted_packets 
-                            << " Ignored: " << ignored 
-                            << std::endl;
-            } else {
-                stream << "[STATISTICS] Throughput: " << (bps / 1e6) << " Mbps, "
+            if (csv_mode) {
+                stream << "STATS," << mbps << "," << elapsed << "," 
+                        << data_packets << "," << acks << "," << nacks << ","
+                        << corrupted_packets << "," << ignored << std::endl;
+            } else if (report_percent) {
+                stream << "[STATISTICS] Throughput: " << mbps << " Mbps, "
                             << "Packets " << senderText << ": " << data_packets 
                             << " ACKS%: " << percent(acks, data_packets)
                             << " NACKS%: " << percent(nacks, data_packets) 
                             << " Corrupted%: " << percent(corrupted_packets, data_packets) 
                             << " Ignored%: " << percent(ignored, data_packets) 
+                            << std::endl;
+            } else {
+                stream << "[STATISTICS] Throughput: " << mbps << " Mbps, "
+                            << "Packets " << senderText << ": " << data_packets 
+                            << " ACKS: " << acks 
+                            << " NACKS: " << nacks 
+                            << " Corrupted: " << corrupted_packets 
+                            << " Ignored: " << ignored 
                             << std::endl;
             }
             last_stats_time = now;
@@ -82,6 +89,7 @@ public:
 
 private:
     bool report_percent = true;
+    bool csv_mode = false;
     std::string senderText = "";
     std::ostream& stream;
 

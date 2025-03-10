@@ -7,10 +7,10 @@
 
 template<typename DataProcessorType, typename NetworkConnectionType>
 StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver(
-        DataProcessorType&& processor, NetworkConnectionType&& conn, bool debug, uint32_t window_size) :
+        DataProcessorType&& processor, NetworkConnectionType&& conn, bool debug, uint32_t window_size, bool csv) :
             conn(std::move(conn)), processor(std::move(processor)), 
             window(window_size), ackTimes(window_size), nackTimes(window_size),
-            stats(false), debug(debug), window_size(window_size) {
+            stats(false, csv, true), debug(debug), window_size(window_size) {
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
 }
