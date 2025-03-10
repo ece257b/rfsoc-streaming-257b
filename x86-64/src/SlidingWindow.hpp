@@ -1,12 +1,13 @@
 #pragma once
 #include <stdlib.h>
+#include "Protocol.hpp"
 
 template <typename PacketType>
 class SlidingWindow {
 public:
     SlidingWindow(size_t window_size) : window_size(window_size) {
         clear();
-    };
+    }
     ~SlidingWindow() {};
     
     PacketType* reserve(uint32_t seq_num) {
@@ -14,18 +15,18 @@ public:
         NumberedPacket& packet = arr[indexOf(seq_num)];
         packet.seq_num = seq_num;
         return &packet.packet;
-    };
+    }
 
     bool contains(uint32_t seq_num) {
         return inBounds(seq_num) && arr[indexOf(seq_num)].seq_num == seq_num;
-    };
+    }
 
     PacketType* get(uint32_t seq_num) {
         if (!inBounds(seq_num)) return nullptr;
         NumberedPacket& packet = arr[indexOf(seq_num)];
         if (packet.seq_num == seq_num) return &packet.packet;
         return nullptr;
-    };
+    }
 
     bool erase(uint32_t seq_num) {
         if (!inBounds(seq_num)) return false;
@@ -37,7 +38,8 @@ public:
         if (seq_num <= base_seq) return false;  // cannot advance backwards.
         base_seq = seq_num;
         base = indexOf(base_seq);
-    };
+        return true;
+    }
 
     void clear() {
         base = 0;
@@ -48,16 +50,17 @@ public:
         arr[0].seq_num = -1;
     }
 
-protected:
-    struct NumberedPacket {
-        PacketType packet;
-        uint32_t seq_num;
-    }
-
     inline bool inBounds(uint32_t seq_num) {
         // All currently stored elements must have seq_num in bounds!
         return (seq_num >= base_seq) && (seq_num - base_seq < window_size);
     }
+
+protected:
+    struct NumberedPacket {
+        PacketType packet;
+        uint32_t seq_num;
+    };
+
     inline size_t indexOf(uint32_t seq_num) {
         return seq_num % window_size;
     }

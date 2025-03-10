@@ -1,12 +1,16 @@
 #pragma once
 #include <thread>
+#include <cassert>
 #include "StreamReceiver.hpp"
 #include "NetworkConnection.hpp"
 #include "cmn.h"
 
 template<typename DataProcessorType, typename NetworkConnectionType>
 StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver(
-        DataProcessorType&& processor, NetworkConnectionType&& conn, bool debug, uint32_t window_size) : conn(std::move(conn)), processor(std::move(processor)), stats(false), debug(debug), window_size(window_size) {
+        DataProcessorType&& processor, NetworkConnectionType&& conn, bool debug, uint32_t window_size) :
+            conn(std::move(conn)), processor(std::move(processor)), 
+            window(window_size), ackTimes(window_size), nackTimes(window_size),
+            stats(false), debug(debug), window_size(window_size) {
     static_assert(std::is_base_of<DataProcessorType, DataProcessorType>::value, "type parameter of this class must derive from DataProcessorType");
     static_assert(std::is_base_of<NetworkConnection, NetworkConnectionType>::value, "type parameter of this class must derive from NetworkConnection");
 }
@@ -49,31 +53,35 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::re
             if(debug)
                 std::cerr << "Invalid checksum for packet seq " << seq_num << " Len: " << recv_len << ", discarding." << std::endl;
             stats.record_corrupted();
-            past_nack_times.erase(seq_num);  // might want to re-nack this guy!
+            nackTimes.erase(seq_num);  // might want to re-nack this guy!
             continue;
         }
+
+        bool didntIgnore = false;
 
         if (ctrl_flag == FLAG_DATA) {
             if (seq_num == expected_seq) {
                 if(debug)
                     std::cout << "Processing exp seq " << seq_num << std::endl; 
-                processor.processData(recv_len - sizeof(packet.header), packet.data);
-                stats.record_packet(recv_len - sizeof(packet.header));
-                past_ack_times.erase(seq_num);  // erase past NACK times if necessary
-                past_nack_times.erase(seq_num);  // erase past NACK times if necessary
-                expected_seq++;
-                count++;
-                
+                count += processPacket(&packet, recv_len - sizeof(packet.header));
                 count += processOutOfOrder();    // maybe we should send an ACK here if we process many packets?
+
+                assert(advanceAllWindows(expected_seq));
+                didntIgnore = true;
+
             } else if (seq_num > expected_seq) {
                 if (!window.contains(seq_num)) {
-                    Packet* windowPacket = window.reserve(seq_num);
-                    memcpy((void*)windowPacket, (void*)&packet, sizeof(packet));  // May want to change algo here to avoid memcpy...
-                    if(debug)
-                        std::cout << "Stored out-of-order packet seq: " << seq_num << " (exp " << expected_seq << ")" << std::endl;
-                } else {
-                    stats.record_ignored();
+                    Packet* windowPacketInfo = window.reserve(seq_num);
+                    if (windowPacketInfo) {
+                        memcpy(windowPacketInfo, (void*)&packet, sizeof(Packet));  // May want to change algo here to avoid memcpy...
+                        if(debug)
+                            std::cout << "Stored out-of-order packet seq: " << seq_num << " (exp " << expected_seq << ")" << std::endl;
+                        didntIgnore = true;
+                    } else {
+                        if (debug) std::cout << seq_num << " out of bounds of Window!" << std::endl;
+                    }
                 }
+
                 for(uint32_t missing = expected_seq; missing < seq_num; missing++) {
                     if (!window.contains(missing)) {
                         if (sendACK(missing, FLAG_NACK)) {
@@ -87,6 +95,9 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::re
                 if (sendACK(expected_seq)) {
                     if (debug) std::cout << "Already seen " << seq_num << " , sent ACK for " << expected_seq << std::endl;
                 }
+            }
+
+            if (!didntIgnore) {
                 stats.record_ignored();
             }
 
@@ -100,6 +111,8 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::re
             sendFINACK(seq_num);
             running = false;
         }
+
+        assert(window.inBounds(expected_seq));
     }
     return count;
 }
@@ -109,14 +122,23 @@ template<typename DataProcessorType, typename NetworkConnectionType>
 int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::sendACK(
         uint32_t seq_num, uint8_t flag, bool checkPastACKs) {
     
-    auto& ack_map = (flag == FLAG_ACK) ? past_ack_times : past_nack_times;
-    if (checkPastACKs) {
-        const auto& it = ack_map.find(seq_num);
-        bool shouldSend = (
-            it == past_ack_times.end() || 
-            std::chrono::duration_cast<microseconds>(steady_clock::now() - it->second).count() > RETRY_ACK_US
-        );
-        if (!shouldSend) return 0;
+    if (flag == FLAG_ACK || flag == FLAG_NACK) {
+        // Don't care if FINACK
+        auto& ack_window = (flag == FLAG_ACK) ? ackTimes : nackTimes;
+        bool sentBefore = ack_window.contains(seq_num);
+        timepoint* time = ack_window.reserve(seq_num);
+        if (!time) {
+            std::cerr << "ACK Window was out of range for " << flag << " " << seq_num << std::endl;
+        }
+        timepoint now = std::chrono::steady_clock::now();
+        if (checkPastACKs) {
+            bool shouldSend = (
+                !sentBefore || //Short circuiting getting an invalid time
+                std::chrono::duration_cast<microseconds>(now - *time).count() > RETRY_ACK_US
+            );
+            if (!shouldSend) return 0;
+        }
+        *time = now;
     }
     
     PacketHeader ack_hdr;
@@ -129,7 +151,6 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::se
     ack_hdr.checksum = htons(ack_chksum);
 
     stats.record_ack(flag);
-    ack_map[seq_num] = std::chrono::steady_clock::now();
 
     return conn.send(&ack_hdr, sizeof(ack_hdr));
 }
@@ -142,28 +163,15 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::pr
     //     out_of_order.erase(expected_seq);
     //     expected_seq++;
     // }
-    if (window.isEmpty()) return 0;
-    window.resetIter();
-    Packet* packet = window.getIter();
+    Packet* packet = window.get(expected_seq);
     int count = 0;
-    bool hasNext = false;
-    do {
-        uint32_t this_seq = ntohl(packet->header.seq_num);
-        if (this_seq != expected_seq) {
-            // There was another gap in sequence numbers that we have, so break here.
-            return count;
-        }
-        hasNext = window.nextIter();   // increment iter and check if done
-        processor.processData(sizeof(packet->data), packet->data);
-        stats.record_packet(sizeof(packet->data));
-        count++;
-        expected_seq++;
+    while (packet) {
+        count += processPacket(packet, sizeof(packet->data));
         if(debug)
-            std::cout << "Processing Out of Order " << this_seq << std::endl; 
-
-        packet = window.getIter();
-        window.erase(this_seq);
-    } while(hasNext);
+            std::cout << "Processed Out of Order " << (expected_seq - 1) << std::endl; 
+        
+        packet = window.get(expected_seq);
+    }
     return count;
 }
 
@@ -229,6 +237,47 @@ bool StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::s
 template<typename DataProcessorType, typename NetworkConnectionType>
 int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::teardown() {
     window.clear();
+    ackTimes.clear();
+    nackTimes.clear();
+
     conn.close();
     return 0;
 }
+
+
+template<typename DataProcessorType, typename NetworkConnectionType>
+bool StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::advanceAllWindows(uint32_t seq_num) {
+    return window.advanceTo(seq_num) && ackTimes.advanceTo(seq_num) && nackTimes.advanceTo(seq_num);
+}
+
+template<typename DataProcessorType, typename NetworkConnectionType>
+bool StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::processPacket(Packet* packet, ssize_t size) {
+    processor.processData(size, packet->data);
+    stats.record_packet(size);
+    expected_seq++;
+    return true;
+}
+
+
+/*
+
+PacketInfo
+packet
+has_data
+
+
+How do we know if Packet has no data and never ACKd
+- seq_num != (!contains)
+
+How do we know if Packet has data
+- seq_num == (contains) && has_data
+
+How do we know if Packet has no data and HAS ACKd
+- contains && !has_data
+
+
+
+ACKing
+- set has_data = false if it didn't has_data
+
+*/

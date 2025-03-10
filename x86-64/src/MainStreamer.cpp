@@ -6,11 +6,11 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
-std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, uint32_t num_dummy_packets, bool debug, bool stats, int windowsize) {
+std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool stats, int windowsize) {
     UNUSED(stats);
     std::unique_ptr<StreamSenderInterface> ptr;
 
-    if (istream.good()) {
+    if (num_dummy_packets == -1) {
         std::cout << "streaming from file" << std::endl;
         auto sender = new StreamSender<FileReader, PacketMap<PacketInfo>, UDPStreamSender>(
             FileReader(istream), PacketMap<PacketInfo>(), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     bool stats = false;
     int windowsize = WINDOW_SIZE;
     std::string filename = "";
-    uint32_t num_dummy_packets = 1000;
+    int num_dummy_packets = 1000;
 
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
@@ -72,6 +72,7 @@ int main(int argc, char* argv[]) {
 
     if (filename != "") {
         fstream.open(filename, std::ios::binary);
+        num_dummy_packets = -1;
     }
 
     auto receiver = senderFactory(receiver_port, receiver_ip, fstream, num_dummy_packets, debug, stats, windowsize);
