@@ -1,6 +1,7 @@
 #pragma once
 #include <thread>
 #include <cassert>
+#include <cstring>
 #include "StreamReceiver.hpp"
 #include "NetworkConnection.hpp"
 #include "cmn.h"
@@ -205,7 +206,7 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::ha
     std::memcpy(negotiation_packet, &net_buffer_size, sizeof(uint16_t));
     std::memcpy(negotiation_packet + sizeof(uint16_t), &net_packet_size, sizeof(uint16_t));
     size_t s = conn.send(negotiation_packet, sizeof(negotiation_packet));
-    if(s < 0) {
+    if(s == 0) {
         perror("sendto negotiation packet failed");
         return 1;
     } else if(debug) {

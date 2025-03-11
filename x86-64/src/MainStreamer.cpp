@@ -5,19 +5,21 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
+std::string sender_ip = "192.168.1.1";
+
 std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool csv, int windowsize, bool superdumb) {
     std::unique_ptr<StreamSenderInterface> ptr;
 
     if (num_dummy_packets == -1) {
         std::cout << "streaming from file" << std::endl;
         auto sender = new StreamSender<FileReader, UDPStreamSender>(
-            FileReader(istream), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize, csv
+            FileReader(istream), UDPStreamSender(receiver_port, receiver_ip, sender_ip), debug, windowsize, csv
         );
         ptr.reset(sender);
     } else {
         std::cout << "streaming dummy data" << std::endl;
         auto sender = new StreamSender<DummyProvider, UDPStreamSender>(
-            DummyProvider(num_dummy_packets, superdumb), UDPStreamSender(receiver_port, receiver_ip), debug, windowsize, csv
+            DummyProvider(num_dummy_packets, superdumb), UDPStreamSender(receiver_port, receiver_ip, sender_ip), debug, windowsize, csv
         );
         ptr.reset(sender);
     }

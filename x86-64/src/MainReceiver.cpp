@@ -6,17 +6,19 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
+std::string receiver_ip = "192.168.1.101";
+
 std::unique_ptr<StreamReceiverInterface> receiverFactory(int receiver_port, std::ostream& ostream, float perror, bool debug, bool csv, int windowsize) {
     std::unique_ptr<StreamReceiverInterface> ptr;
 
     if (perror == 0) {
         auto receiver = new StreamReceiver<FileWriter, UDPStreamReceiver>(
-            FileWriter(ostream), UDPStreamReceiver(receiver_port), debug, windowsize, csv
+            FileWriter(ostream), UDPStreamReceiver(receiver_port, receiver_ip), debug, windowsize, csv
         );
         ptr.reset(receiver);
     } else {
         auto receiver = new StreamReceiver<FileWriter, FaultyUDPStreamReceiver>(
-            FileWriter(ostream), FaultyUDPStreamReceiver(receiver_port, perror, true, 1), debug, windowsize, csv
+            FileWriter(ostream), FaultyUDPStreamReceiver(receiver_port, perror, receiver_ip, true, 1), debug, windowsize, csv
         );
         ptr.reset(receiver);
     }

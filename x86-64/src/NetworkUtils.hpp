@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <string>
 
-inline int createUDPSocket() {
+inline int createUDPSocket(std::string interface="") {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if(sockfd < 0) {
         perror("socket creation failed");
@@ -20,6 +20,14 @@ inline int createUDPSocket() {
     // Set non-blocking mode.
     int flags = fcntl(sockfd, F_GETFL, 0);
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+    
+    if (interface != "") {
+        int ret = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, interface.c_str(), interface.size());
+        if (ret < 0) {
+            perror("setsockopt");
+        }
+        std::cout << ret << " " << interface << std::endl;
+    }
     
     return sockfd;
 }

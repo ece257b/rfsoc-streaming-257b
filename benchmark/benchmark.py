@@ -82,15 +82,15 @@ def run_test(csvname, config: dict):
 if __name__ == "__main__":
     os.chdir("../x86-64/src/")
 
-    for windowsize in range(1, 1000, 100):
-        run_config["window_size"] = windowsize
-        pprint(run_config)
-        run_test(WINDOW_CSV_PATH, run_config)
-
-    # run_config["window_size"] = 1000
-
-    # for error in [0.0001, 0.001, 0.01, 0.1]:
-    #     run_config["perror"] = error
+    # for windowsize in range(1, 1000, 100):
+    #     run_config["window_size"] = windowsize
     #     pprint(run_config)
-    #     run_test(ERROR_CSV_PATH, run_config)
+    #     run_test(WINDOW_CSV_PATH, run_config)
+
+    run_config["window_size"] = 1000
+
+    for error in [0.0001, 0.001, 0.01, 0.1]:
+        run_config["perror"] = error
+        pprint(run_config)
+        run_test(ERROR_CSV_PATH, run_config)
         

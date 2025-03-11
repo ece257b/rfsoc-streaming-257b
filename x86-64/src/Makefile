@@ -6,13 +6,14 @@ UNAME_S := $(shell uname -s)
 # Set compiler based on OS
 ifeq ($(UNAME_S), Darwin)
     CXX = clang++
+	CXXFLAGS := -std=c++11 -Wall -Wextra -g -I /opt/homebrew/include
 else
     CXX = g++
+	CXXFLAGS := -std=c++11 -Wall -Wextra -g
 endif
 
-CXXFLAGS := -std=c++11 -Wall -Wextra -g -I /opt/homebrew/include
 # LDFLAGS := -L /opt/homebrew/lib -L/usr/local/lib -lzmq -lboost_system -lboost_thread -lpthread -lzmqpp
-LDFLAGS := ""
+LDFLAGS :=
 
 # Automatically find all .cpp and .hpp files
 SRCS := $(wildcard *.cpp)
