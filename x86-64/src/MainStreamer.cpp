@@ -5,7 +5,8 @@
 #include "UDPNetworkConnection.hpp"
 #include "cmn.h"
 
-std::string sender_ip = "192.168.1.1";
+// std::string sender_ip = "192.168.1.1";
+std::string sender_ip = "";
 
 std::unique_ptr<StreamSenderInterface> senderFactory(int receiver_port, std::string& receiver_ip, std::istream& istream, int num_dummy_packets, bool debug, bool csv, int windowsize, bool superdumb) {
     std::unique_ptr<StreamSenderInterface> ptr;
