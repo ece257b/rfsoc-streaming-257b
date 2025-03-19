@@ -71,6 +71,12 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::re
 
             } else if (seq_num > expected_seq) {
                 if (!window.contains(seq_num)) {
+                    if (recv_len != sizeof(Packet)) {
+                        // This is the last packet, need to save the length to process correctly
+                        lastSeqLen = recv_len;
+                        lastSeq = seq_num;
+                    }
+
                     Packet* windowPacketInfo = window.reserve(seq_num);
                     if (windowPacketInfo) {
                         memcpy(windowPacketInfo, (void*)&packet, sizeof(Packet));  // May want to change algo here to avoid memcpy...
@@ -166,7 +172,13 @@ int StreamReceiver<DataProcessorType, NetworkConnectionType>::StreamReceiver::pr
     Packet* packet = window.get(expected_seq);
     int count = 0;
     while (packet) {
-        count += processPacket(packet, sizeof(packet->data));
+        ssize_t s = sizeof(packet->data);
+        if (expected_seq == lastSeq) {
+            // We received the last packet (with incomplete recv_len) out of order,
+            // Need to process with correct size
+            s = lastSeqLen - sizeof(PacketHeader);
+        }
+        count += processPacket(packet, s);
         if(debug)
             std::cout << "Processed Out of Order " << (expected_seq - 1) << std::endl; 
         

@@ -52,6 +52,8 @@ protected:
     uint32_t base = 0;      // lowest unacknowledged sequence number
     uint32_t expected_seq = 0;  // next sequence number to send
     uint32_t window_size;
+    uint32_t lastSeq = -1;
+    uint32_t lastSeqLen = -1;
 
     int handshake();
     int sendACK(uint32_t seq_num, uint8_t flag=FLAG_ACK, bool checkPastACKs=true);
