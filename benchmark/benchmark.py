@@ -18,6 +18,7 @@ compile_config = {
 
 
 WINDOW_CSV_PATH = os.path.join(os.getcwd(), "window.csv")
+FULL_TEST_CSV_PATH = os.path.join(os.getcwd(), "full_test.csv")
 ERROR_CSV_PATH = os.path.join(os.getcwd(), "error.csv")
 
 def append_to_csv(csvname, run_config, compile_config, throughput):
@@ -87,10 +88,19 @@ if __name__ == "__main__":
     #     pprint(run_config)
     #     run_test(WINDOW_CSV_PATH, run_config)
 
-    run_config["window_size"] = 1000
+    # run_config["window_size"] = 1000
 
-    for error in [0.0001, 0.001, 0.01, 0.1]:
-        run_config["perror"] = error
-        pprint(run_config)
-        run_test(ERROR_CSV_PATH, run_config)
-        
+    # for error in [0.0001, 0.001, 0.01, 0.1]:
+    #     run_config["perror"] = error
+    #     pprint(run_config)
+    #     run_test(ERROR_CSV_PATH, run_config)
+    
+    # for windowsize in [1, 10, 50, 100, 200, 400, 800, 1200, 1600]:
+    for windowsize in [3000, 5000, 6000, 7000]:
+        run_config["window_size"] = windowsize
+
+        for error in [0.0001, 0.001, 0.01, 0.1]:
+            run_config["perror"] = error
+
+            pprint(run_config)
+            run_test(FULL_TEST_CSV_PATH, run_config)

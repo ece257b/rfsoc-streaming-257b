@@ -52,7 +52,7 @@ public:
 
 // NetworkConnection Interface
     bool open() override {
-        sockfd = createUDPSocket("enp2s0f1np1");
+        sockfd = createUDPSocket("enp2s0f0np0");
         receiver_addr = setupReceiver(sockfd, receiver_port, receiver_ip);
 
         if (sender_ip != "") {
@@ -97,7 +97,7 @@ public:
 
 // NetworkConnection Interface
     bool open() override {
-        sockfd = createUDPSocket("enp2s0f0np0");
+        sockfd = createUDPSocket("enp2s0f1np1");
         
         std::memset(&receiver_addr, 0, sizeof(receiver_addr));
         receiver_addr.sin_family      = AF_INET;
