@@ -13,6 +13,7 @@ For ECE 257B Cross-Evaluation, please follow [Build](#build), [Running the Code]
     - [Running the Code](#running-the-code)
     - [Benchmarking](#benchmarking)
     - [Protocol Validation](#protocol-validation)
+    - [Command Line Args in Detail](#command-line-args-in-detail)
   - [File Overview](#file-overview)
     - [`x86-64/src`](#x86-64src)
       - [Streaming Protocol Implementation](#streaming-protocol-implementation)
@@ -114,6 +115,29 @@ diff myfile outfile
 ```
 
 If all is well, the `diff` command will have no output!
+
+### Command Line Args in Detail
+```sh
+./Streamer <receiver_ip> <receiver_port> [-file filename] [-num num_dummy_packets] [-window windowsize] [--debug] [--csv] [--superdumb]
+```
+
+- Required: `receiver_ip` and `receiver_port` define the destination of the `Receiver` of the stream. Use `127.0.0.1` for localhost/loopback.
+- `-file filename` stream from a file
+- `-num num_dummy_packets` stream some number of dummy packets (instead of file data)
+- `-window windowsize` specify the window size
+- `--debug` print debug logs
+- `--csv` print statistics as CSV
+- `--superdumb` don't generate dummy data, just use the data already in the buffer for max speed
+
+```sh
+./Receiver <receiver_port> [-file filename] [-perror err] [-window windowsize] [--debug] [--csv]
+```
+
+- Required: `receiver_port` define the port the `Receiver` should listen on. Must match the `receiver_port` from `Streamer`
+- `-file filename` output received data to a file
+- `-window windowsize` specify the window size
+- `--debug` print debug logs
+- `--csv` print statistics as CSV
 
 
 ## File Overview
