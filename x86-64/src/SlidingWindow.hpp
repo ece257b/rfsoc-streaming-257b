@@ -1,11 +1,13 @@
 #pragma once
 #include <stdlib.h>
+#include <cassert>
 #include "Protocol.hpp"
 
 template <typename PacketType>
 class SlidingWindow {
 public:
     SlidingWindow(size_t window_size) : window_size(window_size) {
+        assert(window_size <= WINDOW_SIZE);
         clear();
     }
     ~SlidingWindow() {};

@@ -4,12 +4,15 @@ UCSD ECE 257B Project - Streaming from RFSoc
 This repo contains an implementation of our Sliding Window ACK/NACK based Streaming protocol, currently implemented for one way streaming between two PCs.
 The implementation has abstractions allowing it to be extended in the future to stream between an RFSoC (ZCU111 FPGA) and a PC and zmq+srsRAN.
 
+For ECE 257B Cross-Evaluation, please follow [Build](#build), [Running the Code](#running-the-code), [Benchmarking](#benchmarking), and [Protocol Validation](#protocol-validation).
+
 
 - [rfsoc-streaming-257b](#rfsoc-streaming-257b)
-  - [Running the Code](#running-the-code)
-    - [Setup](#setup)
+  - [Usage](#usage)
+    - [Build](#build)
+    - [Running the Code](#running-the-code)
     - [Benchmarking](#benchmarking)
-    - [Generate Random File](#generate-random-file)
+    - [Protocol Validation](#protocol-validation)
   - [File Overview](#file-overview)
     - [`x86-64/src`](#x86-64src)
       - [Streaming Protocol Implementation](#streaming-protocol-implementation)
@@ -21,21 +24,96 @@ The implementation has abstractions allowing it to be extended in the future to 
     - [`benchmark`](#benchmark)
 
 
-## Running the Code
+## Usage
 
-### Setup
+### Build
 Requirements
 - Tested for MacOS or Ubuntu
-- C++11
+- Streaming
+  - C++11
+- python 3.8+, matplotlib, pandas for plotting
 
-To build the 
+
+To build the `MainStreamer` and `MainReceiver`, run the following, which will generate the `Streamer` and `Receiver` executables in `x86-64/src`
+
+```sh
+cd x86-64/src
+make
+```
+
+### Running the Code
+
+To test the performance of our protocol, we can run `Streamer` and `Receiver` with different window sizes and various packet drop probability and monitor the throughput.
+
+```sh
+cd x86-64/src
+make
+
+# Stream 10000 dummy packets on localhost to port 12345, with windowsize 100
+./Streamer 127.0.0.1 12345 -num 100000 -window 100
+
+# RUN ME IN A NEW SHELL
+# Receive the stream on port 12345
+./Receiver 12345 -window 100
+
+# Alternatively, with packet drop probability...
+# Receive the stream on port 12345, with 1% of packets dropped (simulating bad channel/congestion)
+./Receiver 12345 -window 100 -perror 0.01
+```
+
+Running these commands will print the statistics, where you can see the Throughput in Mbps.
+Feel free to experiment with various values of `window` and `perror`, just ensure the `window` parameters for `Streamer` and `Receiver` match.
 
 ### Benchmarking
 
-### Generate Random File
+Now we can run the benchmarking script to see how probability of error affects the optimal window size, and see what the peak throughput is.
+
 ```sh
-head -c 1000000 </dev/urandom >myfile
+cd x86-64/src
+make
+
+cd ../../benchmark
+
+ # (delete previous test results, if they exist)
+rm -f full_test.csv   
+
+# Run the benchmark, with 14 different window sizes and 4 different values of perror
+# This should take around 5 mins
+python3 benchmark.py
+
+# Plot the results saved in full_test.csv
+python3 plot.py
 ```
+
+You should end up with something like [this](docs/ThroughputVsMbps.png).
+
+### Protocol Validation
+
+To verify the streaming protocol is 100% reliable, we can try streaming a file and verify that the output matches.
+We can induce random errors to verify that the checksum/NACK mechanism is working as intended, and all data is received correctly even when packets need to be dropped because of low channel quality/congestion.
+
+
+```sh
+cd x86-64/src
+make all
+
+# Generate a random file
+head -c 1000000 </dev/urandom >myfile   
+
+# Stream myfile on localhost to port 12345, with windowsize 100
+./Streamer 127.0.0.1 12345 -file myfile -window 100
+
+
+# RUN ME IN A NEW SHELL
+# Receive the stream on port 12345, saving the data to outfile, with windowsize 100 and simulated packet drop probability 0.1 (10%)
+./Receiver 12345 -file outfile -window 100 -perror 0.1
+
+
+# Compare the files
+diff myfile outfile
+```
+
+If all is well, the `diff` command will have no output!
 
 
 ## File Overview

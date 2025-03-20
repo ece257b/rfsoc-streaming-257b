@@ -45,9 +45,12 @@ public:
     void report(bool final=false) {
         auto now = steady_clock::now();
         auto elapsed = duration_cast<milliseconds>(now - last_stats_time).count();
+        if (elapsed == 0) {
+            return;
+        }
         if(final || elapsed >= 1000) {
             double mbps = data_bytes * 8.0 / elapsed * 1000 / 1e6;
-            if (mbps == 0 || std::isinf(mbps)) {
+            if (mbps == 0) {
                 last_stats_time = now;
                 reset();
                 return;

@@ -10,9 +10,10 @@ else
     CXX = g++
 endif
 
-CXXFLAGS := -std=c++11 -Wall -Wextra -g -I /opt/homebrew/include
-# LDFLAGS := -L /opt/homebrew/lib -L/usr/local/lib -lzmq -lboost_system -lboost_thread -lpthread -lzmqpp
-LDFLAGS := ""
+CXXFLAGS := -std=c++11 -Wall -Wextra -g
+
+ZMQ_LDFLAGS := -I /opt/homebrew/include -L /opt/homebrew/lib -L/usr/local/lib -lzmq -lboost_system -lboost_thread -lpthread -lzmqpp
+LDFLAGS :=
 
 # Automatically find all .cpp and .hpp files
 SRCS := $(wildcard *.cpp)
@@ -41,7 +42,7 @@ RECEIVER_BASIC := BasicReceiver
 OBJS := $(COMMON_SRCS:.cpp=.o)
 
 # Default target
-all: $(STREAMER) $(RECEIVER) ${STREAMER_BASIC} ${RECEIVER_BASIC} ${ZMQPub}
+all: $(STREAMER) $(RECEIVER)
 
 # Build first prografinHeader
 $(STREAMER): $(OBJS) $(STREAMER_MAIN:.cpp=.o)

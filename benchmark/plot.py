@@ -27,6 +27,30 @@ def plot(csv, xcol, ycol, logx=False, logy=False):
     ax.grid(True)
     plt.show()
 
-plot(WINDOW_CSV_PATH, "window_size", "mbps")
+# plot(WINDOW_CSV_PATH, "window_size", "mbps")
 
-plot(ERROR_CSV_PATH, "perror", "mbps", logx=True)
+# plot(ERROR_CSV_PATH, "perror", "mbps", logx=True)
+
+
+def multiplot_error_windowsize(csv):
+    df = pd.read_csv(csv)
+    df = df.sort_values(by="window_size")
+    fig, ax = plt.subplots()
+
+    ax.set_xscale('log')
+
+    errors = df['perror'].unique()
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+
+    for i, error in enumerate(errors):
+        temp_df = df[df['perror'] == error]
+        ax.plot(temp_df['window_size'], temp_df['mbps'], color=colors[i % len(colors)], label=f'Error: {error}', marker='o')
+
+    ax.set_title('Throughput (Mbps) vs Windowsize')
+    ax.set_xlabel('Windowsize')
+    ax.set_ylabel('Throughput (Mbps)')
+    ax.legend()
+    plt.show()
+
+
+multiplot_error_windowsize("full_test.csv")
