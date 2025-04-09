@@ -63,7 +63,8 @@ typedef ap_axis<64,0,0,0> axis_word;
 //    ap_uint<1>  last;
 //};
 
-void loop_var(hls::stream<axis_word> &out_stream) {
+void counter(hls::stream<axis_word> &out_stream) {
+#pragma HLS PIPELINE II=1 style=flp
 #pragma HLS INTERFACE mode=axis register_mode=both port=out_stream register
 #pragma HLS INTERFACE ap_ctrl_none port=return
 

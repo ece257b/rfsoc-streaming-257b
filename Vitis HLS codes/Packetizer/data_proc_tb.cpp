@@ -22,7 +22,7 @@ typedef ap_axis<64,0,0,0> axis_word;
 
 int main () {
   hls::stream<axis_word> input;
-  int N = 512;
+  int N = 180 * 3;
 
   for(int i=0; i<N;++i) {
     axis_word w;
@@ -36,10 +36,12 @@ int main () {
   // Call the function
   hls::stream<axis_word> output;
   for(int i=0; i<N;++i) {
-    axis_word o;
     data_proc(input, output);
-    output.read(o);
+  }
 
+  for (int i=0; i < N; i++) {
+	axis_word o;
+  	output.read(o);
     FILE << static_cast<int>(o.data) << " " << static_cast<int>(o.last) << endl;
   }
   FILE.close();

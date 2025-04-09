@@ -3,7 +3,7 @@
   <spirit:vendor>xilinx.com</spirit:vendor>
   <spirit:library>hls</spirit:library>
   <spirit:name>loop_var</spirit:name>
-  <spirit:version>1.4</spirit:version>
+  <spirit:version>1.6</spirit:version>
   <spirit:busInterfaces>
     <spirit:busInterface>
       <spirit:name>ap_clk</spirit:name>
@@ -138,7 +138,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>221456f2</spirit:value>
+            <spirit:value>a764ca96</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -154,7 +154,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>d64b8363</spirit:value>
+            <spirit:value>99ba7319</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -170,7 +170,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>308520c5</spirit:value>
+            <spirit:value>aa65fbf2</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -186,7 +186,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>5f35b0dd</spirit:value>
+            <spirit:value>83aac3b1</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -373,14 +373,6 @@
         <spirit:userFileType>USED_IN_out_of_context</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>hdl/verilog/loop_var_hls_deadlock_idx0_monitor.v</spirit:name>
-        <spirit:fileType>verilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>hdl/verilog/loop_var_hls_deadlock_kernel_monitor_top.vh</spirit:name>
-        <spirit:fileType>verilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
         <spirit:name>hdl/verilog/loop_var_regslice_both.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
       </spirit:file>
@@ -391,16 +383,6 @@
     </spirit:fileSet>
     <spirit:fileSet>
       <spirit:name>xilinx_verilogbehavioralsimulation_view_fileset</spirit:name>
-      <spirit:file>
-        <spirit:name>hdl/verilog/loop_var_hls_deadlock_idx0_monitor.v</spirit:name>
-        <spirit:fileType>verilogSource</spirit:fileType>
-        <spirit:userFileType>USED_IN_ipstatic</spirit:userFileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>hdl/verilog/loop_var_hls_deadlock_kernel_monitor_top.vh</spirit:name>
-        <spirit:fileType>verilogSource</spirit:fileType>
-        <spirit:userFileType>USED_IN_ipstatic</spirit:userFileType>
-      </spirit:file>
       <spirit:file>
         <spirit:name>hdl/verilog/loop_var_regslice_both.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
@@ -426,7 +408,7 @@
       <spirit:file>
         <spirit:name>hdl/vhdl/loop_var.vhd</spirit:name>
         <spirit:fileType>vhdlSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_e90cce16</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_2f5f1507</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -459,7 +441,7 @@
     <spirit:fileSet>
       <spirit:name>xilinx_xpgui_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>xgui/loop_var_v1_4.tcl</spirit:name>
+        <spirit:name>xgui/loop_var_v1_6.tcl</spirit:name>
         <spirit:fileType>tclSource</spirit:fileType>
         <spirit:userFileType>CHECKSUM_bdef2832</spirit:userFileType>
         <spirit:userFileType>XGUI_VERSION_2</spirit:userFileType>
@@ -478,7 +460,7 @@
   <spirit:parameters>
     <spirit:parameter>
       <spirit:name>Component_Name</spirit:name>
-      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">loop_var_v1_4</spirit:value>
+      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">loop_var_v1_6</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>clk_period</spirit:name>
@@ -498,7 +480,7 @@
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>II</spirit:name>
-      <spirit:value spirit:id="PARAM_VALUE.II" spirit:order="6">x</spirit:value>
+      <spirit:value spirit:id="PARAM_VALUE.II" spirit:order="6">1</spirit:value>
     </spirit:parameter>
   </spirit:parameters>
   <spirit:vendorExtensions>
@@ -511,8 +493,8 @@
       </xilinx:taxonomies>
       <xilinx:displayName>counter</xilinx:displayName>
       <xilinx:definitionSource>HLS</xilinx:definitionSource>
-      <xilinx:coreRevision>2113960899</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2025-02-19T03:39:35Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>2114030781</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2025-04-08T16:21:26Z</xilinx:coreCreationDateTime>
       <xilinx:sdxKernelAttributes>
         <xilinx:sdx_kernel>true</xilinx:sdx_kernel>
         <xilinx:sdx_kernel_type>hls</xilinx:sdx_kernel_type>
@@ -521,9 +503,9 @@
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2022.1</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="a1cf6790"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="a32351ba"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="484a4964"/>
       <xilinx:checksum xilinx:scope="ports" xilinx:value="6d9d3ddd"/>
-      <xilinx:checksum xilinx:scope="parameters" xilinx:value="525e8260"/>
+      <xilinx:checksum xilinx:scope="parameters" xilinx:value="bfcd10f7"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>
 </spirit:component>
