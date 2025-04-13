@@ -1,0 +1,12 @@
+Version 1.5:
+Basic code, outputs 1 data sample/ 2 clock cycles --> Fixed in 1.7
+
+Version 1.7:
+First working module with ECPRI format counter data showing up on wireshark with 80 bytes/packet, 8 byte data o/p per clock cycle fixed
+
+Version 2.2:
+Old code for Method 2 (Buffer implementation in software, instead of FIFO in block design)
+Can be safely ignored
+
+Version 3.0:
+Refactored 1.7 for RFDC block, Using MTU = 1500 bytes, Corrected source and destination addresses

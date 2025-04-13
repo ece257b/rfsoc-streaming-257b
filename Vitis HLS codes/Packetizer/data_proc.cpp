@@ -21,9 +21,14 @@
 
 ap_uint<64> src_addr =  0x0;
 ap_uint<64> dest_addr = 0XFFFFFFFFFFFF;
-// Actual eth type = 0xAEFE, flipped it here for convenience in sending
+// Actual eth type = 0xAEFE, flipped here for convenience in sending
 ap_uint<64> eth_type = 0xFEAE;
-ap_uint<64> maxm = 10;
+// Ethernet MTU = 1500 bytes, 16 bytes used for header
+// Payload Data Size = 1484 bytes/ packet
+// Vivado Block sends 8 bytes/ clk cycle
+// maxm = Number of clock cycles after which data_proc asserts tlast (ie. End of packet)
+// So maxm = 1484/8 = approx 185
+ap_uint<64> maxm = 185;
 
 typedef ap_axis<64,0,0,0> axis_word;
 
@@ -39,15 +44,15 @@ void data_proc(hls::stream<axis_word> &in_stream, hls::stream<axis_word> &out_st
 
     if (data_count == 0) {
     	// Send opposite of what you want to receive (Populate from right side)
-    	// Want to receive [s s s s s s | d d] [d d d d | e e | 0 0]
-    	// Transmit this   [d d | s s s s s s] [0 0 | e e | d d d d]
-    	// d d s s s s s s
-    	// ff ff 00 00 00 00 00 00
-        output_word.data = src_addr | ((dest_addr >> 32) << 48);
+    	// Want to receive [d d d d d d | s s] [s s s s | e e | 0 0]
+    	// Transmit this   [s s | d d d d d d] [0 0 | e e | s s s s]
+    	// s s d d d d d d
+    	// 00 00 ff ff ff ff ff ff
+        output_word.data = dest_addr | ((src_addr >> 32) << 48);
     } else if (data_count == 1) {
-    	// - - e e d d d d
-    	// 00 00 fe ae ff ff ff ff
-        output_word.data = (dest_addr & 0x0000FFFFFFFF) | eth_type << 32;
+    	// - - e e s s s s
+    	// 00 00 fe ae 00 00 00 00
+        output_word.data = (src_addr & 0x0000FFFFFFFF) | eth_type << 32;
 
     } else {
         in_stream.read(output_word);
